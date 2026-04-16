@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 180 100% 50%; /* Neon Cyan */
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 300 100% 50%; /* Neon Magenta */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 180 100% 50%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 180 100% 50%;
+    --radius: 0.75rem;
+
+    /* Custom Neon Variables */
+    --neon-cyan: #00f3ff;
+    --neon-magenta: #ff00f7;
+    --neon-green: #39ff14;
+    --neon-blue: #0066ff;
+    
+    --glow-opacity: 0.4;
+  }
+
+  [data-theme='midnight'] {
+    --background: 222 47% 4%;
+    --primary: 199 89% 48%; /* Deep Sky Blue */
+    --secondary: 174 72% 56%; /* Teal */
+    --ring: 199 89% 48%;
+  }
+
+  [data-theme='emerald'] {
+    --background: 150 20% 4%;
+    --primary: 142 100% 50%; /* Neon Green */
+    --secondary: 160 84% 39%; /* Emerald */
+    --ring: 142 100% 50%;
+  }
+
+  [data-theme='minimal-dark'] {
+    --background: 240 10% 3.9%;
+    --primary: 210 40% 96.1%;
+    --secondary: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --neon-cyan: #94a3b8;
+    --neon-magenta: #475569;
+    --neon-green: #64748b;
+    --neon-blue: #334155;
+    --glow-opacity: 0;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground selection:bg-primary/30;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    background-image: radial-gradient(circle at 50% -20%, rgba(0, 243, 255, 0.05), transparent 50%),
+                      radial-gradient(circle at 0% 0%, rgba(255, 0, 247, 0.02), transparent 30%);
+  }
+  
+  [data-theme='minimal-dark'] body {
+    background-image: none;
+  }
+}
+
+@layer utilities {
+  .glow-cyan {
+    box-shadow: 0 0 15px rgba(0, 243, 255, var(--glow-opacity));
+  }
+  
+  [data-theme='minimal-dark'] .glow-cyan {
+    box-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .glow-magenta {
+    box-shadow: 0 0 15px rgba(255, 0, 247, var(--glow-opacity));
+  }
+
+  [data-theme='minimal-dark'] .glow-magenta {
+    box-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .glow-green {
+    box-shadow: 0 0 15px rgba(57, 255, 20, var(--glow-opacity));
+  }
+
+  [data-theme='minimal-dark'] .glow-green {
+    box-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+  .border-glow {
+    border-image: linear-gradient(to right, var(--neon-cyan), var(--neon-magenta)) 1;
+  }
+  .text-shadow-neon {
+    text-shadow: 0 0 10px currentColor;
+  }
+  .glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
