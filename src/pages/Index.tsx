@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { parseFlightData, FlightRow, refreshFlightETAs, isInternationalFlight } from '@/lib/parseFlightData';
 import FlightTable from '@/components/FlightTable';
 import PairedFlightView from '@/components/PairedFlightView';
 import FlightCharts from '@/components/FlightCharts';
+import FlightMap from '@/components/FlightMap';
 import SectorDurationManager from '@/components/SectorDurationManager';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,7 +22,7 @@ import { Plane, Table, RefreshCw, Trash2, Copy, Globe, MapPin, LayoutGrid, BarCh
 type FilterMode = 'all' | 'departure' | 'arrival';
 type RouteType = 'all' | 'domestic' | 'international';
 type ShiftMode = 'all' | 'morning' | 'evening';
-type AppTheme = 'cyberpunk' | 'midnight' | 'emerald' | 'minimal-dark';
+type AppTheme = 'cyberpunk' | 'midnight' | 'emerald' | 'minimal-dark' | 'classic';
 
 const timeToMinutes = (timeStr: string) => {
   if (!timeStr) return 0;
@@ -151,12 +153,18 @@ const Index = () => {
     const intlDacArrsCount = intlDacArrs.length;
     const intlDacArrsPax = intlDacArrs.reduce((sum, r) => sum + (r.pax || 0), 0);
 
+    const totalDomCount = domDacDepsCount + domDacArrsCount;
+    const totalDomPax = domDacDepsPax + domDacArrsPax;
+
+    const totalIntlCount = intlDacDepsCount + intlDacArrsCount;
+    const totalIntlPax = intlDacDepsPax + intlDacArrsPax;
+
     return { 
       totalCount, totalPax,
-      dacDepsCount, dacDepsPax,
+      totalDomCount, totalDomPax,
+      totalIntlCount, totalIntlPax,
       domDacDepsCount, domDacDepsPax,
       intlDacDepsCount, intlDacDepsPax,
-      dacArrsCount, dacArrsPax,
       domDacArrsCount, domDacArrsPax,
       intlDacArrsCount, intlDacArrsPax
     };
@@ -227,15 +235,15 @@ const Index = () => {
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-black/40 backdrop-blur-xl">
+    <div className="flex flex-col h-full bg-black/40 backdrop-blur-xl overflow-y-auto custom-scrollbar">
       <div className="p-6">
         <div className="flex items-center gap-3 mb-10 group">
           <div className="p-2.5 rounded-xl bg-primary/20 text-primary glow-cyan transition-transform group-hover:scale-110">
             <Plane className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-sm font-black tracking-tighter text-white uppercase leading-none">Us Bangla</h1>
-            <p className="text-[10px] font-bold text-primary/70 uppercase tracking-widest mt-1">Flight Analysis</p>
+            <h1 className="text-base font-black tracking-tighter text-white uppercase leading-none">Us Bangla</h1>
+            <p className="text-xs font-bold text-primary/70 uppercase tracking-widest mt-1">Flight Analysis</p>
           </div>
         </div>
         
@@ -244,7 +252,7 @@ const Index = () => {
             active={activeTab === 'paired'} 
             onClick={() => { setActiveTab('paired'); setIsMobileSidebarOpen(false); }} 
             icon={<LayoutGrid size={18} />} 
-            label="Live Load" 
+            label="MORNING LOAD" 
           />
           <SidebarBtn 
             active={activeTab === 'table'} 
@@ -259,6 +267,12 @@ const Index = () => {
             label="Analytics" 
           />
           <SidebarBtn 
+            active={activeTab === 'map'} 
+            onClick={() => { setActiveTab('map'); setIsMobileSidebarOpen(false); }} 
+            icon={<Globe size={18} />} 
+            label="Network Map" 
+          />
+          <SidebarBtn 
             active={activeTab === 'settings'} 
             onClick={() => { setActiveTab('settings'); setIsMobileSidebarOpen(false); }} 
             icon={<Settings size={18} />} 
@@ -271,21 +285,21 @@ const Index = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Roster Input</p>
-              <Button variant="ghost" size="icon" className="h-4 w-4 text-slate-500 hover:text-rose-500" onClick={() => handleInputChange('')}>
-                <Trash2 size={12} />
+              <p className="text-xs uppercase tracking-wider text-slate-400 font-bold">Roster Input</p>
+              <Button variant="ghost" size="icon" className="h-5 w-5 text-slate-500 hover:text-rose-500" onClick={() => handleInputChange('')}>
+                <Trash2 size={14} />
               </Button>
             </div>
             <Textarea
               value={input}
               onChange={e => handleInputChange(e.target.value)}
               placeholder="Paste roster data here..."
-              className="h-32 text-xs bg-black/40 border-white/10 text-slate-200 placeholder:text-slate-600 focus-visible:ring-primary/30 rounded-xl"
+              className="h-32 text-sm bg-black/40 border-white/20 text-slate-200 placeholder:text-slate-600 focus-visible:ring-primary/30 rounded-xl font-mono"
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Button onClick={handleGenerate} size="sm" className="w-full text-[10px] font-bold uppercase tracking-wider glow-cyan">Process</Button>
-            <Button onClick={handleClear} variant="outline" size="sm" className="w-full text-[10px] font-bold uppercase tracking-wider border-white/10 text-slate-400 hover:bg-white/5">Reset</Button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button onClick={handleGenerate} size="sm" className="w-full h-10 text-xs font-bold uppercase tracking-wider glow-cyan">Process</Button>
+            <Button onClick={handleClear} variant="outline" size="sm" className="w-full h-10 text-xs font-bold uppercase tracking-wider border-white/20 text-slate-400 hover:bg-white/5">Reset</Button>
           </div>
         </div>
       </div>
@@ -301,7 +315,10 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
+        <div className={cn(
+          "absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay",
+          (theme === 'minimal-dark' || theme === 'classic') && "hidden"
+        )}></div>
         
         <header className="h-16 border-b border-white/5 bg-black/20 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 shrink-0 z-10">
           <div className="flex items-center gap-2 sm:gap-4 overflow-hidden">
@@ -321,7 +338,7 @@ const Index = () => {
             </Sheet>
 
             <h2 className="text-xs font-black uppercase tracking-[0.2em] text-primary truncate">
-              {activeTab === 'paired' ? 'Live Load' : activeTab === 'table' ? 'Operations' : activeTab === 'charts' ? 'Analytics' : 'Config'}
+              {activeTab === 'paired' ? 'MORNING LOAD' : activeTab === 'table' ? 'Operations' : activeTab === 'charts' ? 'Analytics' : activeTab === 'map' ? 'Network Map' : 'Config'}
             </h2>
             <div className="hidden sm:block h-3 w-px bg-white/10" />
             <div className="hidden sm:flex items-center gap-2 text-[10px] uppercase font-bold text-slate-500 tracking-wider shrink-0">
@@ -335,13 +352,14 @@ const Index = () => {
                 <button onClick={() => setTheme('cyberpunk')} className={cn("w-6 h-6 rounded-full bg-[#00f3ff] transition-transform hover:scale-110", theme === 'cyberpunk' && "ring-2 ring-white ring-offset-2 ring-offset-black")} title="Cyberpunk" />
                 <button onClick={() => setTheme('midnight')} className={cn("w-6 h-6 rounded-full bg-[#0ea5e9] transition-transform hover:scale-110", theme === 'midnight' && "ring-2 ring-white ring-offset-2 ring-offset-black")} title="Midnight" />
                 <button onClick={() => setTheme('emerald')} className={cn("w-6 h-6 rounded-full bg-[#10b981] transition-transform hover:scale-110", theme === 'emerald' && "ring-2 ring-white ring-offset-2 ring-offset-black")} title="Emerald" />
+                <button onClick={() => setTheme('classic')} className={cn("w-6 h-6 rounded-full bg-slate-200 border border-slate-400 transition-transform hover:scale-110", theme === 'classic' && "ring-2 ring-blue-500 ring-offset-2 ring-offset-white")} title="Classic" />
              </div>
 
              <Select value={shift} onValueChange={(v) => handleShiftChange(v as ShiftMode)}>
-                <SelectTrigger className="w-[100px] sm:w-[120px] h-8 text-[10px] font-bold uppercase bg-white/5 border-white/10 text-slate-400">
+                <SelectTrigger className="w-[110px] sm:w-[130px] h-9 text-xs font-bold uppercase bg-white/5 border-white/20 text-slate-400">
                   <SelectValue placeholder="Shift" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-white/10 text-slate-200">
+                <SelectContent className="bg-slate-900 border-white/20 text-slate-200">
                   <SelectItem value="all">Full Day</SelectItem>
                   <SelectItem value="morning">Morning</SelectItem>
                   <SelectItem value="evening">Evening</SelectItem>
@@ -350,8 +368,8 @@ const Index = () => {
 
              <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-primary hover:bg-primary/5 h-8">
-                  <CalendarIcon className="w-3.5 h-3.5 mr-2" />
+                <Button variant="ghost" size="sm" className="text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-primary hover:bg-primary/5 h-9 px-4">
+                  <CalendarIcon className="w-4 h-4 mr-2" />
                   <span className="hidden sm:inline">Set Date</span>
                 </Button>
               </PopoverTrigger>
@@ -367,33 +385,33 @@ const Index = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3">
-                <div className="h-1 w-8 bg-primary rounded-full shadow-[0_0_8px_var(--neon-cyan)]"></div>
-                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.25em]">Fleet Operational Pulse</h3>
+                <div className="h-1 w-10 bg-primary rounded-full shadow-[0_0_10px_black] dark:shadow-[0_0_10px_var(--neon-cyan)]"></div>
+                <h3 className="text-xs font-black text-foreground/40 uppercase tracking-[0.25em]">Fleet Operational Pulse</h3>
               </div>
-              <div className="flex items-center gap-2 bg-white/5 px-4 py-1.5 rounded-full border border-white/10">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Aggregate</span>
-                <span className="text-xs font-black text-white">{stats.totalCount} MVMT</span>
-                <span className="h-2.5 w-px bg-white/10 mx-1" />
-                <span className="text-xs font-black text-primary">{stats.totalPax.toLocaleString()} PAX</span>
+              <div className="flex items-center gap-3 bg-foreground/5 px-5 py-2 rounded-full border border-border">
+                <span className="text-[10px] font-black text-foreground/50 uppercase tracking-widest">Aggregate</span>
+                <span className="text-sm font-black text-foreground">{stats.totalCount} MVMT</span>
+                <span className="h-3 w-px bg-border mx-1" />
+                <span className="text-sm font-black text-primary">{stats.totalPax.toLocaleString()} PAX</span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
-                <h4 className="text-[8px] font-black text-primary/50 uppercase tracking-[0.4em] pl-1">Ex-Dhaka Output (Departures)</h4>
+                <h4 className="text-[10px] font-black text-primary/60 uppercase tracking-[0.4em] pl-1">Domestic Operational Pulse</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <StatCard label="Total Dep" value={stats.dacDepsCount} subValue={stats.dacDepsPax} icon={<Plane className="rotate-[-45deg] glow-cyan" size={14} />} variant="cyan" />
-                  <StatCard label="Domestic" value={stats.domDacDepsCount} subValue={stats.domDacDepsPax} icon={<MapPin size={14} />} variant="slate" />
-                  <StatCard label="Intl" value={stats.intlDacDepsCount} subValue={stats.intlDacDepsPax} icon={<Globe size={14} />} variant="magenta" />
+                  <StatCard label="Total Dom" value={stats.totalDomCount} subValue={stats.totalDomPax} icon={<Table className="glow-cyan" size={16} />} variant="cyan" />
+                  <StatCard label="Ex-DAC" value={stats.domDacDepsCount} subValue={stats.domDacDepsPax} icon={<Plane className="rotate-[-45deg]" size={16} />} variant="slate" />
+                  <StatCard label="In-DAC" value={stats.domDacArrsCount} subValue={stats.domDacArrsPax} icon={<Plane className="rotate-[135deg]" size={16} />} variant="slate" />
                 </div>
               </div>
 
               <div className="space-y-4">
-                <h4 className="text-[8px] font-black text-secondary/50 uppercase tracking-[0.4em] pl-1">In-Dhaka Input (Arrivals)</h4>
+                <h4 className="text-[10px] font-black text-secondary/60 uppercase tracking-[0.4em] pl-1">International Operational Pulse</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <StatCard label="Total Arr" value={stats.dacArrsCount} subValue={stats.dacArrsPax} icon={<Plane className="rotate-[135deg] glow-magenta" size={14} />} variant="magenta" />
-                  <StatCard label="Domestic" value={stats.domDacArrsCount} subValue={stats.domDacArrsPax} icon={<MapPin size={14} />} variant="slate" />
-                  <StatCard label="Intl" value={stats.intlDacArrsCount} subValue={stats.intlDacArrsPax} icon={<Globe size={14} />} variant="cyan" />
+                  <StatCard label="Total Intl" value={stats.totalIntlCount} subValue={stats.totalIntlPax} icon={<Globe className="glow-magenta" size={16} />} variant="magenta" />
+                  <StatCard label="Ex-DAC" value={stats.intlDacDepsCount} subValue={stats.intlDacDepsPax} icon={<Plane className="rotate-[-45deg]" size={16} />} variant="slate" />
+                  <StatCard label="In-DAC" value={stats.intlDacArrsCount} subValue={stats.intlDacArrsPax} icon={<Plane className="rotate-[135deg]" size={16} />} variant="slate" />
                 </div>
               </div>
             </div>
@@ -412,38 +430,53 @@ const Index = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
                         <Select value={filter} onValueChange={(v) => setFilter(v as FilterMode)}>
-                          <SelectTrigger className="w-[120px] h-8 text-[10px] font-bold uppercase bg-white/5 border-white/10 text-slate-400">
+                          <SelectTrigger className="w-[140px] h-9 text-xs font-bold uppercase bg-white/5 border-white/20 text-slate-400 px-4">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-slate-900 border-white/10 text-slate-200">
+                          <SelectContent className="bg-slate-900 border-white/20 text-slate-200">
                             <SelectItem value="all">Full Traffic</SelectItem>
                             <SelectItem value="departure">Departures</SelectItem>
                             <SelectItem value="arrival">Arrivals</SelectItem>
                           </SelectContent>
                         </Select>
-                        <div className="flex p-1 bg-white/5 rounded-xl border border-white/5">
-                          <RouteFilterBtn active={routeType === 'all'} onClick={() => setRouteType('all')} label="All" />
-                          <RouteFilterBtn active={routeType === 'domestic'} onClick={() => setRouteType('domestic')} label="Dom" />
-                          <RouteFilterBtn active={routeType === 'international'} onClick={() => setRouteType('international')} label="Intl" />
-                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button onClick={handleRefresh} variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-primary hover:bg-white/5 gap-2">
-                          <RefreshCw className="w-3 h-3" /> Sync
+                      <div className="flex items-center gap-3">
+                        <Button onClick={handleRefresh} variant="ghost" size="sm" className="h-9 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-primary hover:bg-white/5 gap-2 px-4 shadow-sm">
+                          <RefreshCw className="w-4 h-4" /> Sync
                         </Button>
-                        <Button onClick={handleCopy} size="sm" className="h-8 text-[10px] font-bold uppercase tracking-wider glow-cyan gap-2" disabled={renumbered.length === 0}>
-                          <Copy className="w-3 h-3" /> CopyTSV
+                        <Button onClick={handleCopy} size="sm" className="h-9 text-xs font-bold uppercase tracking-wider glow-cyan gap-2 px-5" disabled={renumbered.length === 0}>
+                          <Copy className="w-4 h-4" /> CopyTSV
                         </Button>
                       </div>
                     </div>
-                    {renumbered.length > 0 ? (
-                      <FlightTable data={renumbered} />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-32 text-slate-600">
-                        <Table className="w-12 h-12 mb-4 opacity-10" />
-                        <p className="text-xs uppercase font-black tracking-widest opacity-20">No matching telemetry found</p>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      {/* Domestic Table */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-1">
+                          <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_8px_black] dark:shadow-[0_0_10px_var(--neon-cyan)]"></div>
+                          <span className="text-xs font-black uppercase tracking-[0.2em] text-foreground/80">Domestic Payload Matrix</span>
+                        </div>
+                        {domesticFlights.length > 0 ? (
+                          <FlightTable data={domesticFlights} />
+                        ) : (
+                          <div className="h-40 flex items-center justify-center border border-border rounded-[var(--radius)] bg-foreground/2 text-xs uppercase font-black tracking-widest text-foreground/40">No Domestic Traffic</div>
+                        )}
                       </div>
-                    )}
+
+                      {/* International Table */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-1">
+                          <div className="w-2.5 h-2.5 rounded-full bg-secondary shadow-[0_0_8px_black] dark:shadow-[0_0_10px_var(--neon-magenta)]"></div>
+                          <span className="text-xs font-black uppercase tracking-[0.2em] text-foreground/80">International Payload Matrix</span>
+                        </div>
+                        {internationalFlights.length > 0 ? (
+                          <FlightTable data={internationalFlights} />
+                        ) : (
+                          <div className="h-40 flex items-center justify-center border border-border rounded-[var(--radius)] bg-foreground/2 text-xs uppercase font-black tracking-widest text-foreground/40">No Intl Traffic</div>
+                        )}
+                      </div>
+                    </div>
                  </div>
               )}
 
@@ -451,12 +484,18 @@ const Index = () => {
                 <FlightCharts data={shiftFilteredData} />
               )}
 
+              {activeTab === 'map' && (
+                <div className="h-full">
+                  <FlightMap flights={shiftFilteredData} />
+                </div>
+              )}
+
               {activeTab === 'settings' && (
                 <div className="space-y-8 max-w-2xl mx-auto">
                   <div className="glass-card rounded-2xl border border-white/5 p-6 space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
+                        <h3 className="text-[10px] font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
                           <span className="w-2 h-2 bg-secondary rounded-full glow-magenta" />
                           Visual Telemetry Options
                         </h3>
@@ -473,6 +512,19 @@ const Index = () => {
                         checked={theme === 'minimal-dark'} 
                         onCheckedChange={(checked) => {
                           setTheme(checked ? 'minimal-dark' : lastNeonTheme);
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-white/2 rounded-xl border border-white/5">
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-black text-slate-200 uppercase tracking-widest">Enterprise Classic Theme</label>
+                        <p className="text-[8px] text-slate-500 font-bold uppercase">Standard aviation professional interface.</p>
+                      </div>
+                      <Switch 
+                        checked={theme === 'classic'} 
+                        onCheckedChange={(checked) => {
+                          setTheme(checked ? 'classic' : lastNeonTheme);
                         }}
                       />
                     </div>
@@ -493,7 +545,7 @@ const SidebarBtn = ({ active, onClick, icon, label }: { active: boolean, onClick
   <button
     onClick={onClick}
     className={cn(
-      "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all group",
+      "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-[0.2em] transition-all group",
       active 
         ? "bg-primary text-primary-foreground glow-cyan scale-[1.02]" 
         : "text-slate-500 hover:text-primary hover:bg-white/5"
@@ -507,33 +559,44 @@ const SidebarBtn = ({ active, onClick, icon, label }: { active: boolean, onClick
 );
 
 const StatCard = ({ label, value, subValue, icon, variant }: { label: string, value: string | number, subValue?: number, icon: React.ReactNode, variant: 'cyan' | 'magenta' | 'slate' }) => (
-  <div className="glass-card p-4 rounded-xl border border-white/5 flex flex-col gap-3 group transition-transform hover:scale-[1.02]">
-    <div className="flex items-center justify-between">
+  <motion.div 
+    whileHover={{ scale: 1.02, translateY: -2 }}
+    whileTap={{ scale: 0.98 }}
+    className={cn(
+      "glass-card p-4 rounded-[var(--radius)] border border-border flex flex-col gap-4 group transition-all duration-300 relative overflow-hidden",
+      "hover:border-primary/50 hover:shadow-[0_0_20px_rgba(0,243,255,0.15)]",
+      variant === 'magenta' && "hover:border-secondary/50 hover:shadow-[0_0_20px_rgba(236,72,153,0.15)]"
+    )}
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+    <div className="flex items-center justify-between relative z-10">
       <div className={cn(
-        "p-2 rounded-lg text-white shadow-sm",
-        variant === 'cyan' ? 'bg-primary/20 text-primary' : variant === 'magenta' ? 'bg-secondary/20 text-secondary' : 'bg-white/5 text-slate-400'
+        "p-2.5 rounded-[var(--radius)] shadow-sm border border-border transition-all duration-300",
+        variant === 'cyan' ? 'bg-primary/20 text-primary group-hover:shadow-[0_0_10px_var(--neon-cyan)]' : 
+        variant === 'magenta' ? 'bg-secondary/20 text-secondary group-hover:shadow-[0_0_10px_var(--neon-magenta)]' : 
+        'bg-background/40 text-foreground/40'
       )}>
         {icon}
       </div>
       {subValue !== undefined && (
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+        <p className="text-[11px] font-black text-foreground/40 uppercase tracking-widest">
           {subValue.toLocaleString()} PAX
         </p>
       )}
     </div>
-    <div className="overflow-hidden">
-      <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1 truncate">{label}</p>
-      <p className="text-xl font-black text-white leading-none tracking-tight">{value}</p>
+    <div className="overflow-hidden relative z-10">
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/50 mb-1 truncate">{label}</p>
+      <p className="text-2xl font-black text-foreground leading-none tracking-tight">{value}</p>
     </div>
-  </div>
+  </motion.div>
 );
 
 const RouteFilterBtn = ({ active, onClick, label }: { active: boolean, onClick: () => void, label: string }) => (
   <button
     onClick={onClick}
     className={cn(
-      "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-      active ? "bg-white/10 text-primary glow-cyan" : "text-slate-600 hover:text-slate-400"
+      "px-5 py-2 rounded-[var(--radius)] text-xs font-black uppercase tracking-widest transition-all",
+      active ? "bg-foreground/10 text-primary border border-border" : "text-foreground/60 hover:text-foreground/80"
     )}
   >
     {label}

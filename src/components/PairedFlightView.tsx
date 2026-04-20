@@ -220,13 +220,21 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel }: P
   const handleSaveImage = async () => {
     if (!containerRef.current) return;
     try {
-      const dataUrl = await toPng(containerRef.current, { backgroundColor: '#ffffff', pixelRatio: 2 });
+      // Create a style filter to ensure the background is white even if theme is mixed
+      const dataUrl = await toPng(containerRef.current, { 
+        backgroundColor: 'hsl(var(--background))',
+        pixelRatio: 2,
+        style: {
+          padding: '20px',
+        }
+      });
       const a = document.createElement('a');
       a.href = dataUrl;
-      a.download = 'flight_split.png';
+      a.download = `Morning Book load_${format(new Date(), 'yyyyMMdd_HHmm')}.png`;
       a.click();
       toast.success('Image downloaded');
-    } catch {
+    } catch (error) {
+      console.error('Snapshot error:', error);
       toast.error('Failed to generate image');
     }
   };
@@ -234,136 +242,141 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel }: P
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">
-        <Button onClick={handleCopyTable} variant="outline" size="sm" className="gap-2 h-9 text-[10px] font-black uppercase tracking-widest border-white/10 hover:bg-white/5 transition-all">
-          <Copy className="w-3.5 h-3.5 text-primary" /> <span className="hidden sm:inline">Copy Telemetry</span><span className="sm:hidden">Copy</span>
+        <Button onClick={handleCopyTable} variant="outline" size="sm" className="gap-2 h-10 text-[11px] font-black uppercase tracking-widest border-white/20 hover:bg-white/5 transition-all px-4">
+          <Copy className="w-4 h-4 text-primary" /> <span className="hidden sm:inline">Copy Telemetry</span><span className="sm:hidden">Copy</span>
         </Button>
-        <Button onClick={handleDownloadExcel} variant="outline" size="sm" className="gap-2 h-9 text-[10px] font-black uppercase tracking-widest border-white/10 hover:bg-white/5 transition-all">
-          <FileSpreadsheet className="w-3.5 h-3.5 text-secondary" /> <span className="hidden sm:inline">Export XLSX</span><span className="sm:hidden">Excel</span>
+        <Button onClick={handleDownloadExcel} variant="outline" size="sm" className="gap-2 h-10 text-[11px] font-black uppercase tracking-widest border-white/20 hover:bg-white/5 transition-all px-4">
+          <FileSpreadsheet className="w-4 h-4 text-secondary" /> <span className="hidden sm:inline">Export XLSX</span><span className="sm:hidden">Excel</span>
         </Button>
-        <Button onClick={handleSaveImage} variant="outline" size="sm" className="gap-2 h-9 text-[10px] font-black uppercase tracking-widest border-white/10 hover:bg-white/5 transition-all">
-          <Image className="w-3.5 h-3.5 text-primary" /> <span className="hidden sm:inline">Snapshot PNG</span><span className="sm:hidden">Image</span>
+        <Button onClick={handleSaveImage} variant="outline" size="sm" className="gap-2 h-10 text-[11px] font-black uppercase tracking-widest border-white/20 hover:bg-white/5 transition-all px-4">
+          <Image className="w-4 h-4 text-primary" /> <span className="hidden sm:inline">Snapshot PNG</span><span className="sm:hidden">Image</span>
         </Button>
       </div>
 
       <div ref={containerRef} className="space-y-6 p-1">
         {dateLabel && (
-          <div className="text-center py-3 bg-white/5 border border-white/5 rounded-2xl glass-card relative overflow-hidden group">
+          <div className="text-center py-4 bg-foreground/5 border border-border rounded-2xl glass-card relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5 opacity-50"></div>
-            <div className="relative text-[10px] font-black uppercase tracking-[0.4em] text-primary/80">
+            <div className="relative text-xs font-black uppercase tracking-[0.4em] text-foreground/80">
               {dateLabel}
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr,12px,1fr] gap-6 xl:gap-0">
-          {/* Domestic Table */}
-          <div className="glass-card rounded-2xl border border-white/5 overflow-hidden flex flex-col group">
-            <div className="bg-primary/10 border-b border-primary/20 text-primary text-center py-2 text-[9px] font-black uppercase tracking-[0.3em] glow-cyan">
-              Domestic Operational Matrix
-            </div>
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-[10px] border-collapse min-w-[500px]">
-                <thead>
-                  <tr className="bg-white/5 text-slate-500 border-b border-white/5">
-                    {headers.map(h => <th key={`d-h-${h}`} className="px-2 py-3 border-r border-white/5 text-center text-[9px] font-black uppercase tracking-wider">{h}</th>)}
-                  </tr>
-                </thead>
-                <tbody className="font-mono text-slate-300">
-                  {domesticRows.map((d, i) => (
-                    <tr key={`d-row-${i}`} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors group/row">
-                      {d.isFirstInPair && (
-                        <td rowSpan={d.pairLength} className="px-2 py-3 font-black text-center w-8 border-r border-white/5 bg-white/5 text-[10px] text-primary transition-colors group-hover/row:text-white">
-                          {d.sn}
-                        </td>
-                      )}
-                      {d.isFirstInPair && (
-                        <td rowSpan={d.pairLength} className="px-2 py-3 border-r border-white/5 text-center bg-white/2">
-                          {d.row && d.sn ? (
-                             <input
-                              type="text"
-                              value={d.row.reg}
-                              onChange={(e) => onUpdateReg(d.row!.flightNo, 0, e.target.value.toUpperCase())}
-                              className="w-12 bg-black/40 border border-white/10 focus:outline-none focus:border-primary rounded-lg text-center text-[10px] py-1 text-white font-black glow-cyan/20"
-                            />
-                          ) : (
-                            <div className="text-center text-[10px] font-black text-slate-400">{d.row?.reg || ''}</div>
-                          )}
-                        </td>
-                      )}
-                      <td className="px-2 py-3 font-black text-center text-[10px] border-r border-white/5 text-white/90">{d.row?.flightNo || ''}</td>
-                      <td className="px-2 py-3 whitespace-nowrap text-center text-[10px] text-slate-400 border-r border-white/5">{d.row ? `${d.row.from}-${d.row.to}` : ''}</td>
-                      <td className="px-2 py-3 text-center text-[10px] text-slate-500 border-r border-white/5">{d.row?.std || ''}</td>
-                      <td className="px-2 py-3 text-center text-[10px] text-primary font-black border-r border-white/5 text-shadow-neon">{d.row?.eta || ''}</td>
-                      <td className={cn(
-                        "px-2 py-3 font-black text-center text-sm",
-                        d.row && d.row.pax < 60 ? 'text-rose-500 text-shadow-neon' : 'text-slate-200'
-                      )}>
-                        {d.row?.pax || ''}
-                      </td>
+        <div className="overflow-x-auto pb-2 custom-scrollbar">
+          <div className="min-w-[1100px] grid grid-cols-2 gap-8 relative">
+            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border block" />
+            
+            {/* Domestic Table - Left Side */}
+            <div className="flex flex-col gap-4">
+            <div className="glass-card rounded-2xl border border-border overflow-hidden flex flex-col group h-full">
+              <div className="bg-primary/10 border-b border-border text-foreground text-center py-3 text-[11px] font-black uppercase tracking-[0.3em]">
+                Domestic
+              </div>
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-xs border-collapse min-w-[500px]">
+                  <thead>
+                    <tr className="bg-foreground/5 text-foreground/60 border-b border-border">
+                      {headers.map(h => <th key={`d-h-${h}`} className="px-3 py-4 border-r border-border text-center text-[11px] font-black uppercase tracking-wider">{h}</th>)}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="font-mono text-foreground/80">
+                    {domesticRows.map((d, i) => (
+                      <tr key={`d-row-${i}`} className="border-b border-border last:border-0 hover:bg-foreground/5 transition-colors group/row">
+                        {d.isFirstInPair && (
+                          <td rowSpan={d.pairLength} className="px-3 py-4 font-black text-center w-10 border-r border-border bg-foreground/5 text-xs text-primary transition-colors group-hover/row:text-foreground">
+                            {d.sn}
+                          </td>
+                        )}
+                        {d.isFirstInPair && (
+                          <td rowSpan={d.pairLength} className="px-3 py-4 border-r border-border text-center bg-foreground/2">
+                            {d.row && d.sn ? (
+                               <input
+                                type="text"
+                                value={d.row.reg}
+                                onChange={(e) => onUpdateReg(d.row!.flightNo, 0, e.target.value.toUpperCase())}
+                                className="w-16 bg-background/60 border border-border focus:outline-none focus:border-primary rounded-none text-center text-sm py-1.5 text-foreground font-black"
+                              />
+                            ) : (
+                              <div className="text-center text-sm font-black text-foreground">{d.row?.reg || ''}</div>
+                            )}
+                          </td>
+                        )}
+                        <td className="px-3 py-4 font-black text-center text-sm border-r border-border text-foreground">{d.row?.flightNo || ''}</td>
+                        <td className="px-3 py-4 whitespace-nowrap text-center text-sm text-foreground font-black border-r border-border uppercase">{d.row ? `${d.row.from}-${d.row.to}` : ''}</td>
+                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r border-border">{d.row?.std || ''}</td>
+                        <td className="px-3 py-4 text-center text-base font-black border-r border-border text-foreground">{d.row?.eta || ''}</td>
+                        <td className={cn(
+                          "px-3 py-4 font-black text-center text-base border-r border-border",
+                          d.row && d.row.pax < 60 ? 'text-rose-500 text-shadow-neon' : 'text-foreground/80'
+                        )}>
+                          {d.row?.pax || ''}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
-          {/* Spacer */}
-          <div className="hidden xl:block w-3 bg-transparent" />
-
-          {/* International Table */}
-          <div className="glass-card rounded-2xl border border-white/5 overflow-hidden flex flex-col group">
-            <div className="bg-secondary/10 border-b border-secondary/20 text-secondary text-center py-2 text-[9px] font-black uppercase tracking-[0.3em] glow-magenta">
-              International Operational Matrix
-            </div>
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-[10px] border-collapse min-w-[500px]">
-                <thead>
-                  <tr className="bg-white/5 text-slate-500 border-b border-white/5">
-                    {headers.map(h => <th key={`i-h-${h}`} className="px-2 py-3 border-r border-white/5 text-center text-[9px] font-black uppercase tracking-wider">{h}</th>)}
-                  </tr>
-                </thead>
-                <tbody className="font-mono text-slate-300">
-                  {intlRows.map((intl, i) => (
-                    <tr key={`i-row-${i}`} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors group/row">
-                      {intl.isFirstInPair && (
-                        <td rowSpan={intl.pairLength} className="px-2 py-3 font-black text-center w-8 border-r border-white/5 bg-white/5 text-[10px] text-secondary transition-colors group-hover/row:text-white">
-                          {intl.sn}
-                        </td>
-                      )}
-                      {intl.isFirstInPair && (
-                        <td rowSpan={intl.pairLength} className="px-2 py-3 border-r border-white/5 text-center bg-white/2">
-                          {intl.row && intl.sn ? (
-                            <input
-                              type="text"
-                              value={intl.row.reg}
-                              onChange={(e) => onUpdateReg(intl.row!.flightNo, 0, e.target.value.toUpperCase())}
-                              className="w-12 bg-black/40 border border-white/10 focus:outline-none focus:border-secondary rounded-lg text-center text-[10px] py-1 text-white font-black glow-magenta/20"
-                            />
-                          ) : (
-                            <div className="text-center text-[10px] font-black text-slate-400">{intl.row?.reg || ''}</div>
-                          )}
-                        </td>
-                      )}
-                      <td className="px-2 py-3 font-black text-center text-[10px] border-r border-white/5 text-white/90">{intl.row?.flightNo || ''}</td>
-                      <td className="px-2 py-3 whitespace-nowrap text-center text-[10px] text-slate-400 border-r border-white/5">{intl.row ? `${intl.row.from}-${intl.row.to}` : ''}</td>
-                      <td className="px-2 py-3 text-center text-[10px] text-slate-500 border-r border-white/5">{intl.row?.std || ''}</td>
-                      <td className="px-2 py-3 text-center text-[10px] text-secondary font-black border-r border-white/5 text-shadow-neon">{intl.row?.eta || ''}</td>
-                      <td className={cn(
-                        "px-2 py-3 font-black text-center text-sm",
-                        intl.row && intl.row.pax < 60 ? 'text-rose-500 text-shadow-neon' : 'text-slate-200'
-                      )}>
-                        {intl.row?.pax || ''}
-                      </td>
+          {/* International Table - Right Side */}
+          <div className="flex flex-col gap-4">
+            <div className="glass-card rounded-2xl border border-border overflow-hidden flex flex-col group h-full">
+              <div className="bg-secondary/10 border-b border-border text-foreground text-center py-3 text-[11px] font-black uppercase tracking-[0.3em]">
+                International
+              </div>
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-xs border-collapse min-w-[500px]">
+                  <thead>
+                    <tr className="bg-foreground/5 text-foreground/60 border-b border-border">
+                      {headers.map(h => <th key={`i-h-${h}`} className="px-3 py-4 border-r border-border text-center text-[11px] font-black uppercase tracking-wider">{h}</th>)}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="font-mono text-foreground/80">
+                    {intlRows.map((intl, i) => (
+                      <tr key={`i-row-${i}`} className="border-b border-border last:border-0 hover:bg-foreground/5 transition-colors group/row">
+                        {intl.isFirstInPair && (
+                          <td rowSpan={intl.pairLength} className="px-3 py-4 font-black text-center w-10 border-r border-border bg-foreground/5 text-xs text-secondary transition-colors group-hover/row:text-foreground">
+                            {intl.sn}
+                          </td>
+                        )}
+                        {intl.isFirstInPair && (
+                          <td rowSpan={intl.pairLength} className="px-3 py-4 border-r border-border text-center bg-foreground/2">
+                            {intl.row && intl.sn ? (
+                              <input
+                                type="text"
+                                value={intl.row.reg}
+                                onChange={(e) => onUpdateReg(intl.row!.flightNo, 0, e.target.value.toUpperCase())}
+                                className="w-16 bg-background/60 border border-border focus:outline-none focus:border-secondary rounded-none text-center text-sm py-1.5 text-foreground font-black"
+                              />
+                            ) : (
+                              <div className="text-center text-sm font-black text-foreground">{intl.row?.reg || ''}</div>
+                            )}
+                          </td>
+                        )}
+                        <td className="px-3 py-4 font-black text-center text-sm border-r border-border text-foreground">{intl.row?.flightNo || ''}</td>
+                        <td className="px-3 py-4 whitespace-nowrap text-center text-sm text-foreground font-black border-r border-border uppercase">{intl.row ? `${intl.row.from}-${intl.row.to}` : ''}</td>
+                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r border-border">{intl.row?.std || ''}</td>
+                        <td className="px-3 py-4 text-center text-base font-black border-r border-border text-foreground">{intl.row?.eta || ''}</td>
+                        <td className={cn(
+                          "px-3 py-4 font-black text-center text-base border-r border-border",
+                          intl.row && intl.row.pax < 60 ? 'text-rose-500 text-shadow-neon' : 'text-foreground/80'
+                        )}>
+                          {intl.row?.pax || ''}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default PairedFlightView;

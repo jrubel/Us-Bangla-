@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "leaflet/dist/leaflet.css";
+
 @layer base {
   :root {
     --background: 240 10% 3.9%;
@@ -59,6 +61,34 @@
     --neon-blue: #334155;
     --glow-opacity: 0;
   }
+
+  [data-theme='classic'] {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 0%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 30%;
+    --accent: 0 0% 90%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 100% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 0%;
+    --input: 0 0% 0%;
+    --ring: 0 0% 0%;
+    --radius: 0rem;
+    --neon-cyan: #000000;
+    --neon-magenta: #000000;
+    --neon-green: #000000;
+    --neon-blue: #000000;
+    --glow-opacity: 0;
+  }
 }
 
 @layer base {
@@ -73,6 +103,10 @@
   }
   
   [data-theme='minimal-dark'] body {
+    background-image: none;
+  }
+
+  [data-theme='classic'] body {
     background-image: none;
   }
 }
@@ -112,20 +146,47 @@
     backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.05);
   }
+  [data-theme='classic'] .glow-cyan,
+  [data-theme='classic'] .glow-magenta,
+  [data-theme='classic'] .glow-green,
+  [data-theme='classic'] .glow-blue,
+  [data-theme='classic'] .text-shadow-neon {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--muted);
-  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.4); /* Muted slate */
+  border-radius: 20px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+  background: hsl(var(--primary) / 0.6);
+  background-clip: content-box;
+}
+
+[data-theme='classic'] ::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+}
+[data-theme='classic'] ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 20px;
+}
+
+[data-theme='classic'] .custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
 }

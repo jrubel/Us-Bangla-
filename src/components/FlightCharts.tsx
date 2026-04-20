@@ -77,26 +77,26 @@ const FlightCharts = ({ data }: Props) => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
-                <span className="w-2 h-2 bg-primary rounded-full glow-cyan" />
+              <h3 className="text-xs font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
+                <span className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_black] dark:shadow-[0_0_10px_var(--neon-cyan)]" />
                 Sector Volume Matrix
               </h3>
-              <p className="text-[8px] text-slate-500 font-black mt-1 uppercase tracking-widest">Operational flight frequency per route</p>
+              <p className="text-[10px] text-foreground/40 font-black mt-1 uppercase tracking-widest">Operational flight frequency per route</p>
             </div>
           </div>
-          <div className="glass-card p-6 rounded-2xl border border-white/5 h-[380px]">
+          <div className="glass-card p-6 rounded-2xl border border-border h-[380px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={sectorData} layout="vertical" margin={{ left: 20, right: 30 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="currentColor" opacity={0.1} />
                 <XAxis type="number" hide />
-                <YAxis dataKey="sector" type="category" tick={{ fontSize: 9, fontWeight: 900, fill: '#64748b' }} axisLine={false} tickLine={false} width={80} />
+                <YAxis dataKey="sector" type="category" tick={{ fontSize: 10, fontWeight: 900, fill: 'currentColor', opacity: 0.6 }} axisLine={false} tickLine={false} width={80} />
                 <Tooltip 
-                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}
+                  cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                  contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '12px', border: '1px solid var(--border)', color: 'var(--foreground)' }}
                 />
-                <Bar dataKey="flights" fill="#00f3ff" radius={[0, 4, 4, 0]} barSize={16}>
+                <Bar dataKey="flights" fill="var(--primary)" radius={[0, 4, 4, 0]} barSize={16}>
                    {sectorData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} opacity={0.6} className="glow-cyan" />
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} opacity={0.6} />
                   ))}
                 </Bar>
               </BarChart>
@@ -108,25 +108,25 @@ const FlightCharts = ({ data }: Props) => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
-                <span className="w-2 h-2 bg-secondary rounded-full glow-magenta" />
+              <h3 className="text-xs font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
+                <span className="w-2.5 h-2.5 bg-secondary rounded-full shadow-[0_0_8px_black] dark:shadow-[0_0_10px_var(--neon-magenta)]" />
                 Fleet Deployment Schema
               </h3>
-              <p className="text-[8px] text-slate-500 font-black mt-1 uppercase tracking-widest">Aircraft platform utilization architecture</p>
+              <p className="text-[10px] text-foreground/40 font-black mt-1 uppercase tracking-widest">Aircraft platform utilization architecture</p>
             </div>
           </div>
-          <div className="glass-card p-6 rounded-2xl border border-white/5 h-[380px]">
+          <div className="glass-card p-6 rounded-2xl border border-border h-[380px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={typeData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 900, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: '#475569', fontWeight: 900 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.1} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 900, fill: 'currentColor', opacity: 0.6 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: 'currentColor', opacity: 0.6, fontWeight: 900 }} axisLine={false} tickLine={false} />
                 <Tooltip 
-                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                  cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                  contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '12px', border: '1px solid var(--border)', color: 'var(--foreground)' }}
                   formatter={(v: number) => [v, 'Sorties']} 
                 />
-                <Bar dataKey="value" fill="#ff00f7" radius={[4, 4, 0, 0]} barSize={24}>
+                <Bar dataKey="value" fill="var(--secondary)" radius={[4, 4, 0, 0]} barSize={24}>
                   {typeData.map((_, i) => (
                     <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} opacity={0.6} />
                   ))}
@@ -140,13 +140,13 @@ const FlightCharts = ({ data }: Props) => {
       {/* Flight Schedule Timeline */}
       <div className="space-y-6 pb-8">
         <div>
-          <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
-            <span className="w-2 h-2 bg-primary rounded-full glow-cyan" />
+          <h3 className="text-xs font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
+            <span className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_black] dark:shadow-[0_0_10px_var(--neon-cyan)]" />
             Tactical Asset Timeline
           </h3>
-          <p className="text-[8px] text-slate-500 font-black mt-1 uppercase tracking-widest">24-hour synchronized aircraft rotation lifecycle</p>
+          <p className="text-[10px] text-foreground/40 font-black mt-1 uppercase tracking-widest">24-hour synchronized aircraft rotation lifecycle</p>
         </div>
-        <div className="glass-card p-6 rounded-2xl border border-white/5 overflow-x-auto">
+        <div className="glass-card p-6 rounded-2xl border border-border overflow-x-auto">
           <div className="min-w-[900px]">
             <ResponsiveContainer width="100%" height={Math.max(400, timelineData.length * 50)}>
               <BarChart 
@@ -160,34 +160,34 @@ const FlightCharts = ({ data }: Props) => {
                   domain={[0, 1440]} 
                   ticks={[0, 180, 360, 540, 720, 900, 1080, 1260, 1440]}
                   tickFormatter={minutesToTime}
-                  tick={{ fontSize: 9, fill: '#475569', fontWeight: 900 }}
+                  tick={{ fontSize: 10, fill: 'currentColor', opacity: 0.6, fontWeight: 900 }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis 
                   type="category" 
                   dataKey="reg" 
-                  tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} 
+                  tick={{ fontSize: 11, fontWeight: 900, fill: 'currentColor', opacity: 0.8 }} 
                   width={80}
                   axisLine={false}
                   tickLine={false}
                 />
                 <Tooltip 
-                  cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                  cursor={{ fill: 'currentColor', opacity: 0.05 }}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const d = payload[0].payload;
                       return (
-                        <div className="glass-card bg-[#0f172a]/95 text-white p-4 rounded-xl border border-white/10 shadow-2xl text-[9px] space-y-3 min-w-[160px]">
-                          <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                            <span className="font-black text-[11px] text-primary">{d.flightNo}</span>
-                            <span className="px-2 py-0.5 bg-white/5 rounded text-slate-400 font-bold tracking-widest">{d.reg}</span>
+                        <div className="glass-card bg-card/95 text-foreground p-4 rounded-xl border border-border shadow-2xl text-[10px] space-y-3 min-w-[200px]">
+                          <div className="flex justify-between items-center border-b border-border pb-2">
+                            <span className="font-black text-xs text-primary">{d.flightNo}</span>
+                            <span className="px-2 py-0.5 bg-foreground/5 rounded text-foreground/60 font-bold tracking-widest">{d.reg}</span>
                           </div>
                           <div className="grid grid-cols-2 gap-y-2">
-                            <span className="text-slate-500 font-black uppercase">Sector</span>
-                            <span className="text-right font-black text-white">{d.route}</span>
-                            <span className="text-slate-500 font-black uppercase">Window</span>
-                            <span className="text-right font-mono text-primary">{d.displayStd} - {d.displayEta}</span>
+                            <span className="text-foreground/40 font-black uppercase">Sector</span>
+                            <span className="text-right font-black text-foreground">{d.route}</span>
+                            <span className="text-foreground/40 font-black uppercase">Window</span>
+                            <span className="text-right font-mono text-primary font-bold">{d.displayStd} - {d.displayEta}</span>
                           </div>
                         </div>
                       );

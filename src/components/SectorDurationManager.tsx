@@ -62,14 +62,14 @@ const SectorDurationManager = ({ onUpdate }: Props) => {
   };
 
   return (
-    <div className="space-y-6 glass-card rounded-2xl border border-white/5 p-6 group">
+    <div className="space-y-6 glass-card rounded-2xl border border-border p-6 group">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
-            <span className="w-2 h-2 bg-primary rounded-full glow-cyan" />
+          <h3 className="text-xs font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
+            <span className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_black] dark:shadow-[0_0_10px_var(--neon-cyan)]" />
             Sector Duration Config
           </h3>
-          <p className="text-[8px] text-slate-500 font-black mt-1 uppercase tracking-widest leading-relaxed">Customize block time telemetry. Persistent configuration overrides.</p>
+          <p className="text-[10px] text-foreground/40 font-black mt-1 uppercase tracking-widest leading-relaxed">Customize block time telemetry. Persistent configuration overrides.</p>
         </div>
       </div>
       
@@ -78,28 +78,28 @@ const SectorDurationManager = ({ onUpdate }: Props) => {
           const isOverridden = key in overrides;
           const defaultVal = defaults[key];
           return (
-            <div key={key} className="flex items-center gap-4 py-2 px-3 bg-white/2 rounded-xl border border-white/5 hover:bg-white/5 transition-all group/item">
-              <span className="text-[10px] font-black text-slate-400 group-hover/item:text-primary transition-colors min-w-[80px] tracking-widest">{key}</span>
+            <div key={key} className="flex items-center gap-4 py-2.5 px-3 bg-foreground/5 rounded-xl border border-border hover:bg-foreground/10 transition-all group/item">
+              <span className="text-[11px] font-black text-foreground/50 group-hover/item:text-primary transition-colors min-w-[80px] tracking-widest">{key}</span>
               <div className="flex items-center gap-2 flex-1">
                 <Input
                   value={editValues[key] ?? ''}
                   onChange={e => setEditValues(prev => ({ ...prev, [key]: e.target.value }))}
-                  className="w-20 h-8 text-[10px] font-black bg-black/40 border-white/10 text-white text-center focus:border-primary glow-cyan"
+                  className="w-20 h-9 text-xs font-black bg-background/5 border-border text-foreground text-center focus:border-primary"
                 />
-                <span className="text-[9px] font-black text-slate-600 uppercase tracking-tighter w-8">MIN</span>
+                <span className="text-[10px] font-black text-foreground/40 uppercase tracking-tighter w-8">MIN</span>
               </div>
-              <div className="flex items-center gap-1">
-                <Button onClick={() => handleSave(key)} size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:text-primary hover:bg-primary/10">
-                  <Save className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2">
+                <Button onClick={() => handleSave(key)} size="sm" variant="ghost" className="h-9 w-9 p-0 text-foreground/40 hover:text-primary hover:bg-primary/10">
+                  <Save className="w-4 h-4" />
                 </Button>
                 {isOverridden && defaultVal !== undefined && (
-                  <Button onClick={() => handleReset(key)} size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10">
-                    <RotateCcw className="w-3.5 h-3.5" />
+                  <Button onClick={() => handleReset(key)} size="sm" variant="ghost" className="h-9 w-9 p-0 text-foreground/40 hover:text-rose-500 hover:bg-rose-500/10">
+                    <RotateCcw className="w-4 h-4" />
                   </Button>
                 )}
               </div>
-              <div className="w-12 text-center">
-                {isOverridden && <span className="text-[8px] font-black text-primary uppercase tracking-widest glow-cyan">Override</span>}
+              <div className="w-16 text-center">
+                {isOverridden && <span className="text-[9px] font-black text-primary uppercase tracking-widest">Override</span>}
               </div>
             </div>
           );
