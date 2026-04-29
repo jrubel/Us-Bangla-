@@ -141,9 +141,9 @@ const AircraftMarker = React.memo(({
         className: 'custom-plane-icon',
         html: `
           <div class="relative group">
-            <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-black/95 text-[8px] font-black text-white px-2 py-1 rounded border border-white/20 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:-translate-y-1 shadow-2xl z-50 pointer-events-none">
+            <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-background/95 text-[8px] font-black text-foreground px-2 py-1 rounded border border-border whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:-translate-y-1 shadow-2xl z-50 pointer-events-none">
               <div class="text-primary mb-0.5 tracking-tighter">${flight.flightNo}</div>
-              <div class="text-[7px] text-white/50 tracking-widest uppercase">${flight.from} &rarr; ${flight.to}</div>
+              <div class="text-[7px] text-foreground/50 tracking-widest uppercase">${flight.from} &rarr; ${flight.to}</div>
             </div>
             <div style="transform: rotate(${bearing - 45}deg)" class="transition-all duration-300 ${isSelected ? 'text-primary scale-125 drop-shadow-[0_0_8px_var(--primary)]' : 'text-primary/60 hover:text-primary hover:scale-110'}">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" stroke="none">
@@ -164,6 +164,22 @@ AircraftMarker.displayName = 'AircraftMarker';
 const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
   const [selectedFlight, setSelectedFlight] = useState<FlightRow | null>(null);
   const [showAllPaths, setShowAllPaths] = useState(false);
+  const [theme, setTheme] = useState(() => document.documentElement.getAttribute('data-theme') || 'cyberpunk');
+
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+          setTheme(document.documentElement.getAttribute('data-theme') || 'cyberpunk');
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
+  const isLightTheme = theme === 'classic';
   
   // Simulation State
   const [isSimulating, setIsSimulating] = useState(false);
@@ -280,12 +296,15 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
         <MapContainer 
           center={mapCenter} 
           zoom={6} 
-          style={{ height: '100%', width: '100%', background: '#0b0e14' }}
+          style={{ height: '100%', width: '100%', background: 'var(--background)' }}
           zoomControl={false}
         >
           <TileLayer
             attribution='&copy; OpenStreetMap contributors &copy; CARTO'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            url={isLightTheme 
+              ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            }
           />
           
           <MapController flights={localFlights} />
@@ -309,9 +328,9 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                     animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
                     exit={{ opacity: 0, transition: { duration: 0.2 } }}
                     className={cn(
-                      "text-[9px] font-mono px-2 py-1 rounded bg-black/60 border-l-2 backdrop-blur-sm shadow-xl",
+                      "text-[9px] font-mono px-2 py-1 rounded bg-background/80 border-l-2 backdrop-blur-sm shadow-xl",
                       log.type === 'success' ? "border-primary text-primary" : 
-                      log.type === 'warn' ? "border-amber-500 text-amber-500" : "border-white/20 text-white/60"
+                      log.type === 'warn' ? "border-amber-500 text-amber-500" : "border-border text-foreground/60"
                     )}
                   >
                     <span className="opacity-40 mr-1">[{new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
@@ -341,8 +360,8 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                   className: 'custom-div-icon',
                   html: `
                     <div class="relative">
-                      <div class="w-3 h-3 rounded-full ${airport.isDomestic ? 'bg-primary' : 'bg-secondary'} ring-4 ring-black/50 shadow-[0_0_10px_currentColor]"></div>
-                      <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase text-white/40 tracking-tighter whitespace-nowrap">
+                      <div class="w-3 h-3 rounded-full ${airport.isDomestic ? 'bg-primary' : 'bg-secondary'} ring-4 ${isLightTheme ? 'ring-white' : 'ring-black/50'} shadow-[0_0_10px_currentColor]"></div>
+                      <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase text-foreground/40 tracking-tighter whitespace-nowrap">
                         ${airport.code}
                       </div>
                     </div>
@@ -417,7 +436,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                     <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Track Focus: {selectedFlight.flightNo}</span>
                   </div>
-                  <div className="text-[9px] font-black uppercase text-white/40 tracking-wider">
+                  <div className="text-[9px] font-black uppercase text-foreground/40 tracking-wider">
                     {selectedFlight.from} &rarr; {selectedFlight.to}
                   </div>
                 </div>
@@ -425,8 +444,8 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-end">
                     <div className="space-y-0.5">
-                      <div className="text-[8px] font-bold text-white/40 uppercase">Departure</div>
-                      <div className="text-xs font-black text-white">{selectedFlight.std}</div>
+                      <div className="text-[8px] font-bold text-foreground/40 uppercase">Departure</div>
+                      <div className="text-xs font-black text-foreground">{selectedFlight.std}</div>
                     </div>
                     
                     {/* Progress Percentage */}
@@ -439,7 +458,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                         return (
                           <div className="flex flex-col items-center">
                             <span className="text-[9px] font-black text-primary">{pct}%</span>
-                            <div className="w-12 h-0.5 bg-white/10 mt-0.5 relative overflow-hidden">
+                            <div className="w-12 h-0.5 bg-foreground/10 mt-0.5 relative overflow-hidden">
                               <div className="absolute inset-0 bg-primary transition-all duration-300" style={{ width: `${pct}%` }} />
                             </div>
                           </div>
@@ -448,8 +467,8 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                     </div>
 
                     <div className="space-y-0.5 text-right">
-                      <div className="text-[8px] font-bold text-white/40 uppercase">Arrival</div>
-                      <div className="text-xs font-black text-white">{selectedFlight.eta}</div>
+                      <div className="text-[8px] font-bold text-foreground/40 uppercase">Arrival</div>
+                      <div className="text-xs font-black text-foreground">{selectedFlight.eta}</div>
                     </div>
                   </div>
 
@@ -470,7 +489,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
             )}
           </AnimatePresence>
 
-          <div className="glass-card bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl space-y-4">
+          <div className="glass-card bg-background/80 backdrop-blur-xl border border-border rounded-2xl p-4 shadow-2xl space-y-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <div className={cn(
@@ -481,12 +500,12 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-white/50">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
                       {isLiveMode ? "System Time" : "Sim Time"}
                     </div>
                     {isLiveMode && <Badge variant="outline" className="h-4 text-[7px] font-black bg-rose-500/20 text-rose-500 border-rose-500/30 animate-pulse px-1">LIVE</Badge>}
                   </div>
-                  <div className="text-sm font-black text-white font-mono flex items-center gap-1.5">
+                  <div className="text-sm font-black text-foreground font-mono flex items-center gap-1.5">
                     {minutesToTime(simTime)}
                     {isFetching && <span className="text-[8px] text-primary animate-bounce">SYNCING</span>}
                   </div>
@@ -498,21 +517,21 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                   size="sm" 
                   variant="ghost" 
                   className={cn(
-                    "h-8 px-2 text-[10px] font-black border border-white/5",
-                    isLiveMode ? "bg-rose-500/20 text-rose-500 border-rose-500/40" : "text-white/60 hover:bg-white/5"
+                    "h-8 px-2 text-[10px] font-black border border-border",
+                    isLiveMode ? "bg-rose-500/20 text-rose-500 border-rose-500/40" : "text-muted-foreground hover:bg-foreground/5"
                   )}
                   onClick={() => setIsLiveMode(!isLiveMode)}
                 >
                   LIVE
                 </Button>
                 
-                <div className="h-6 w-px bg-white/10 mx-1" />
+                <div className="h-6 w-px bg-border mx-1" />
 
                 <div className="flex items-center gap-1">
                   <Button 
                     size="icon" 
                     variant="ghost" 
-                    className="h-8 w-8 text-white/70 hover:text-white"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
                     onClick={() => {
                       setIsLiveMode(false);
                       setSimTime(startTime);
@@ -524,8 +543,8 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                   <Button 
                     size="icon" 
                     className={cn(
-                      "h-10 w-10 rounded-full transition-all duration-500",
-                      isSimulating ? "bg-primary text-primary-foreground glow-cyan" : "bg-white/10 text-white hover:bg-white/20"
+                      "h-10 w-10 rounded-full transition-all duration-500 shadow-lg",
+                      isSimulating ? "bg-primary text-primary-foreground glow-cyan" : "bg-foreground/10 text-foreground hover:bg-foreground/20"
                     )}
                     onClick={() => setIsSimulating(!isSimulating)}
                     disabled={isLiveMode}
@@ -536,7 +555,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                 
                 {!isLiveMode && (
                   <div className="flex flex-col items-center">
-                    <div className="text-[8px] font-black uppercase text-white/40 mb-1">Speed</div>
+                    <div className="text-[8px] font-black uppercase text-foreground/40 mb-1">Speed</div>
                     <div className="flex items-center gap-1">
                       {[1, 10, 60].map(s => (
                         <Button 
@@ -558,8 +577,8 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "h-7 text-[8px] font-black tracking-widest border border-white/5",
-                  showAllPaths ? "bg-primary/20 text-primary" : "text-white/40"
+                  "h-7 text-[8px] font-black tracking-widest border border-border",
+                  showAllPaths ? "bg-primary/20 text-primary" : "text-muted-foreground/40"
                 )}
                 onClick={() => setShowAllPaths(!showAllPaths)}
               >
@@ -658,22 +677,22 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
           font-family: inherit;
         }
         .custom-popup .leaflet-popup-content-wrapper {
-          background: #0b0e14;
-          color: white;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: var(--background);
+          color: var(--foreground);
+          border: 1px solid var(--border);
           border-radius: 8px;
         }
         .custom-popup .leaflet-popup-tip {
-          background: #0b0e14;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: var(--background);
+          border: 1px solid var(--border);
         }
         .leaflet-bar a {
-          background-color: #0b0e14 !important;
-          color: white !important;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+          background-color: var(--background) !important;
+          color: var(--foreground) !important;
+          border-bottom: 1px solid var(--border) !important;
         }
         .leaflet-bar a:hover {
-          background-color: #1a1f29 !important;
+          background-color: var(--muted) !important;
         }
         .custom-plane-icon {
           background: transparent !important;

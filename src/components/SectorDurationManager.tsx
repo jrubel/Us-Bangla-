@@ -65,11 +65,11 @@ const SectorDurationManager = ({ onUpdate }: Props) => {
     <div className="space-y-6 glass-card rounded-2xl border border-border p-6 group">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xs font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
+          <h3 className="text-sm font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
             <span className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_black] dark:shadow-[0_0_10px_var(--neon-cyan)]" />
             Sector Duration Config
           </h3>
-          <p className="text-[10px] text-foreground/40 font-black mt-1 uppercase tracking-widest leading-relaxed">Customize block time telemetry. Persistent configuration overrides.</p>
+          <p className="text-xs text-foreground/40 font-black mt-1 uppercase tracking-widest leading-relaxed">Customize block time telemetry. Persistent configuration overrides.</p>
         </div>
       </div>
       
@@ -79,14 +79,14 @@ const SectorDurationManager = ({ onUpdate }: Props) => {
           const defaultVal = defaults[key];
           return (
             <div key={key} className="flex items-center gap-4 py-2.5 px-3 bg-foreground/5 rounded-xl border border-border hover:bg-foreground/10 transition-all group/item">
-              <span className="text-[11px] font-black text-foreground/50 group-hover/item:text-primary transition-colors min-w-[80px] tracking-widest">{key}</span>
+              <span className="text-xs font-black text-foreground/50 group-hover/item:text-primary transition-colors min-w-[80px] tracking-widest">{key}</span>
               <div className="flex items-center gap-2 flex-1">
                 <Input
                   value={editValues[key] ?? ''}
                   onChange={e => setEditValues(prev => ({ ...prev, [key]: e.target.value }))}
-                  className="w-20 h-9 text-xs font-black bg-background/5 border-border text-foreground text-center focus:border-primary"
+                  className="w-20 h-9 text-xs font-black bg-background/5 border-border text-foreground text-center focus:border-primary font-mono"
                 />
-                <span className="text-[10px] font-black text-foreground/40 uppercase tracking-tighter w-8">MIN</span>
+                <span className="text-xs font-black text-foreground/40 uppercase tracking-tighter w-10">MIN</span>
               </div>
               <div className="flex items-center gap-2">
                 <Button onClick={() => handleSave(key)} size="sm" variant="ghost" className="h-9 w-9 p-0 text-foreground/40 hover:text-primary hover:bg-primary/10">
@@ -98,8 +98,8 @@ const SectorDurationManager = ({ onUpdate }: Props) => {
                   </Button>
                 )}
               </div>
-              <div className="w-16 text-center">
-                {isOverridden && <span className="text-[9px] font-black text-primary uppercase tracking-widest">Override</span>}
+              <div className="w-20 text-center">
+                {isOverridden && <span className="text-[10px] font-black text-primary uppercase tracking-widest">Override</span>}
               </div>
             </div>
           );

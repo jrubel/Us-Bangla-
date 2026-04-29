@@ -219,22 +219,56 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel }: P
 
   const handleSaveImage = async () => {
     if (!containerRef.current) return;
+    
+    const toastId = toast.loading('Generating snapshot...');
+    
     try {
-      // Create a style filter to ensure the background is white even if theme is mixed
-      const dataUrl = await toPng(containerRef.current, { 
+      const element = containerRef.current;
+      
+      // Calculate content dimensions
+      const innerGrid = element.querySelector('.min-w-\\[1100px\\]') as HTMLElement;
+      const scrollableDiv = element.querySelector('.overflow-x-auto') as HTMLElement;
+      
+      const contentWidth = innerGrid ? Math.max(innerGrid.scrollWidth, 1150) : element.scrollWidth;
+      const contentHeight = element.scrollHeight;
+
+      // Temporarily expand the element to its full size to ensure everything is rendered
+      const originalScrollStyle = scrollableDiv?.style.overflowX || '';
+      const originalWidth = element.style.width;
+      
+      if (scrollableDiv) scrollableDiv.style.overflowX = 'visible';
+      element.style.width = `${contentWidth + 100}px`;
+
+      const dataUrl = await toPng(element, { 
         backgroundColor: 'hsl(var(--background))',
         pixelRatio: 2,
+        width: contentWidth + 100,
+        height: contentHeight + 50,
         style: {
-          padding: '20px',
+          padding: '25px 60px 25px 25px',
+          margin: '0',
+          width: `${contentWidth + 100}px`,
+          height: `${contentHeight + 50}px`,
+          maxWidth: 'none',
+          maxHeight: 'none',
+          overflow: 'visible'
         }
       });
+
+      // Restore original styles
+      if (scrollableDiv) scrollableDiv.style.overflowX = originalScrollStyle;
+      element.style.width = originalWidth;
+
       const a = document.createElement('a');
       a.href = dataUrl;
       a.download = `Morning Book load_${format(new Date(), 'yyyyMMdd_HHmm')}.png`;
       a.click();
-      toast.success('Image downloaded');
+      
+      toast.dismiss(toastId);
+      toast.success('Table snapshot downloaded');
     } catch (error) {
       console.error('Snapshot error:', error);
+      toast.dismiss(toastId);
       toast.error('Failed to generate image');
     }
   };
@@ -242,13 +276,13 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel }: P
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">
-        <Button onClick={handleCopyTable} variant="outline" size="sm" className="gap-2 h-10 text-[11px] font-black uppercase tracking-widest border-white/20 hover:bg-white/5 transition-all px-4">
+        <Button onClick={handleCopyTable} variant="outline" size="sm" className="gap-2 h-10 text-xs font-black uppercase tracking-widest border-border hover:bg-foreground/5 transition-all px-5 text-muted-foreground hover:text-foreground">
           <Copy className="w-4 h-4 text-primary" /> <span className="hidden sm:inline">Copy Telemetry</span><span className="sm:hidden">Copy</span>
         </Button>
-        <Button onClick={handleDownloadExcel} variant="outline" size="sm" className="gap-2 h-10 text-[11px] font-black uppercase tracking-widest border-white/20 hover:bg-white/5 transition-all px-4">
+        <Button onClick={handleDownloadExcel} variant="outline" size="sm" className="gap-2 h-10 text-xs font-black uppercase tracking-widest border-border hover:bg-foreground/5 transition-all px-5 text-muted-foreground hover:text-foreground">
           <FileSpreadsheet className="w-4 h-4 text-secondary" /> <span className="hidden sm:inline">Export XLSX</span><span className="sm:hidden">Excel</span>
         </Button>
-        <Button onClick={handleSaveImage} variant="outline" size="sm" className="gap-2 h-10 text-[11px] font-black uppercase tracking-widest border-white/20 hover:bg-white/5 transition-all px-4">
+        <Button onClick={handleSaveImage} variant="outline" size="sm" className="gap-2 h-10 text-xs font-black uppercase tracking-widest border-border hover:bg-foreground/5 transition-all px-5 text-muted-foreground hover:text-foreground">
           <Image className="w-4 h-4 text-primary" /> <span className="hidden sm:inline">Snapshot PNG</span><span className="sm:hidden">Image</span>
         </Button>
       </div>
@@ -265,49 +299,49 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel }: P
 
         <div className="overflow-x-auto pb-2 custom-scrollbar">
           <div className="min-w-[1100px] grid grid-cols-2 gap-8 relative">
-            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border block" />
+            <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-border block" />
             
             {/* Domestic Table - Left Side */}
             <div className="flex flex-col gap-4">
-            <div className="glass-card rounded-2xl border border-border overflow-hidden flex flex-col group h-full">
-              <div className="bg-primary/10 border-b border-border text-foreground text-center py-3 text-[11px] font-black uppercase tracking-[0.3em]">
+            <div className="glass-card rounded-2xl border-2 border-border overflow-hidden flex flex-col group h-full">
+              <div className="bg-primary/10 border-b-2 border-border text-foreground text-center py-4 text-xs font-black uppercase tracking-[0.3em]">
                 Domestic
               </div>
               <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-xs border-collapse min-w-[500px]">
+                <table className="w-full text-sm border-collapse min-w-[500px]">
                   <thead>
-                    <tr className="bg-foreground/5 text-foreground/60 border-b border-border">
-                      {headers.map(h => <th key={`d-h-${h}`} className="px-3 py-4 border-r border-border text-center text-[11px] font-black uppercase tracking-wider">{h}</th>)}
+                    <tr className="bg-foreground/5 text-foreground/60 border-b-2 border-border">
+                      {headers.map(h => <th key={`d-h-${h}`} className="px-3 py-4 border-r-2 border-border text-center text-xs font-black uppercase tracking-wider">{h}</th>)}
                     </tr>
                   </thead>
                   <tbody className="font-mono text-foreground/80">
                     {domesticRows.map((d, i) => (
-                      <tr key={`d-row-${i}`} className="border-b border-border last:border-0 hover:bg-foreground/5 transition-colors group/row">
+                      <tr key={`d-row-${i}`} className="border-b-2 border-border last:border-0 hover:bg-foreground/5 transition-colors group/row">
                         {d.isFirstInPair && (
-                          <td rowSpan={d.pairLength} className="px-3 py-4 font-black text-center w-10 border-r border-border bg-foreground/5 text-xs text-primary transition-colors group-hover/row:text-foreground">
+                          <td rowSpan={d.pairLength} className="px-3 py-4 font-black text-center w-10 border-r-2 border-border bg-foreground/5 text-xs text-primary transition-colors group-hover/row:text-foreground">
                             {d.sn}
                           </td>
                         )}
                         {d.isFirstInPair && (
-                          <td rowSpan={d.pairLength} className="px-3 py-4 border-r border-border text-center bg-foreground/2">
+                          <td rowSpan={d.pairLength} className="px-3 py-4 border-r-2 border-border text-center bg-foreground/2">
                             {d.row && d.sn ? (
                                <input
                                 type="text"
                                 value={d.row.reg}
                                 onChange={(e) => onUpdateReg(d.row!.flightNo, 0, e.target.value.toUpperCase())}
-                                className="w-16 bg-background/60 border border-border focus:outline-none focus:border-primary rounded-none text-center text-sm py-1.5 text-foreground font-black"
+                                className="w-16 bg-background/60 border-2 border-border focus:outline-none focus:border-primary rounded-md text-center text-sm py-1.5 text-foreground font-black"
                               />
                             ) : (
                               <div className="text-center text-sm font-black text-foreground">{d.row?.reg || ''}</div>
                             )}
                           </td>
                         )}
-                        <td className="px-3 py-4 font-black text-center text-sm border-r border-border text-foreground">{d.row?.flightNo || ''}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-center text-sm text-foreground font-black border-r border-border uppercase">{d.row ? `${d.row.from}-${d.row.to}` : ''}</td>
-                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r border-border">{d.row?.std || ''}</td>
-                        <td className="px-3 py-4 text-center text-base font-black border-r border-border text-foreground">{d.row?.eta || ''}</td>
+                        <td className="px-3 py-4 font-black text-center text-sm border-r-2 border-border text-foreground">{d.row?.flightNo || ''}</td>
+                        <td className="px-3 py-4 whitespace-nowrap text-center text-sm text-foreground font-black border-r-2 border-border uppercase">{d.row ? `${d.row.from}-${d.row.to}` : ''}</td>
+                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r-2 border-border">{d.row?.std || ''}</td>
+                        <td className="px-3 py-4 text-center text-base font-black border-r-2 border-border text-foreground">{d.row?.eta || ''}</td>
                         <td className={cn(
-                          "px-3 py-4 font-black text-center text-base border-r border-border",
+                          "px-3 py-4 font-black text-center text-base border-r-2 border-border",
                           d.row && d.row.pax < 60 ? 'text-rose-500 text-shadow-neon' : 'text-foreground/80'
                         )}>
                           {d.row?.pax || ''}
@@ -320,47 +354,48 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel }: P
             </div>
           </div>
 
+
           {/* International Table - Right Side */}
           <div className="flex flex-col gap-4">
-            <div className="glass-card rounded-2xl border border-border overflow-hidden flex flex-col group h-full">
-              <div className="bg-secondary/10 border-b border-border text-foreground text-center py-3 text-[11px] font-black uppercase tracking-[0.3em]">
+            <div className="glass-card rounded-2xl border-2 border-border overflow-hidden flex flex-col group h-full">
+              <div className="bg-secondary/10 border-b-2 border-border text-foreground text-center py-4 text-xs font-black uppercase tracking-[0.3em]">
                 International
               </div>
               <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-xs border-collapse min-w-[500px]">
+                <table className="w-full text-sm border-collapse min-w-[500px]">
                   <thead>
-                    <tr className="bg-foreground/5 text-foreground/60 border-b border-border">
-                      {headers.map(h => <th key={`i-h-${h}`} className="px-3 py-4 border-r border-border text-center text-[11px] font-black uppercase tracking-wider">{h}</th>)}
+                    <tr className="bg-foreground/5 text-foreground/60 border-b-2 border-border">
+                      {headers.map(h => <th key={`i-h-${h}`} className="px-3 py-4 border-r-2 border-border text-center text-xs font-black uppercase tracking-wider">{h}</th>)}
                     </tr>
                   </thead>
                   <tbody className="font-mono text-foreground/80">
                     {intlRows.map((intl, i) => (
-                      <tr key={`i-row-${i}`} className="border-b border-border last:border-0 hover:bg-foreground/5 transition-colors group/row">
+                      <tr key={`i-row-${i}`} className="border-b-2 border-border last:border-0 hover:bg-foreground/5 transition-colors group/row">
                         {intl.isFirstInPair && (
-                          <td rowSpan={intl.pairLength} className="px-3 py-4 font-black text-center w-10 border-r border-border bg-foreground/5 text-xs text-secondary transition-colors group-hover/row:text-foreground">
+                          <td rowSpan={intl.pairLength} className="px-3 py-4 font-black text-center w-10 border-r-2 border-border bg-foreground/5 text-xs text-secondary transition-colors group-hover/row:text-foreground">
                             {intl.sn}
                           </td>
                         )}
                         {intl.isFirstInPair && (
-                          <td rowSpan={intl.pairLength} className="px-3 py-4 border-r border-border text-center bg-foreground/2">
+                          <td rowSpan={intl.pairLength} className="px-3 py-4 border-r-2 border-border text-center bg-foreground/2">
                             {intl.row && intl.sn ? (
                               <input
                                 type="text"
                                 value={intl.row.reg}
                                 onChange={(e) => onUpdateReg(intl.row!.flightNo, 0, e.target.value.toUpperCase())}
-                                className="w-16 bg-background/60 border border-border focus:outline-none focus:border-secondary rounded-none text-center text-sm py-1.5 text-foreground font-black"
+                                className="w-16 bg-background/60 border-2 border-border focus:outline-none focus:border-secondary rounded-md text-center text-sm py-1.5 text-foreground font-black"
                               />
                             ) : (
                               <div className="text-center text-sm font-black text-foreground">{intl.row?.reg || ''}</div>
                             )}
                           </td>
                         )}
-                        <td className="px-3 py-4 font-black text-center text-sm border-r border-border text-foreground">{intl.row?.flightNo || ''}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-center text-sm text-foreground font-black border-r border-border uppercase">{intl.row ? `${intl.row.from}-${intl.row.to}` : ''}</td>
-                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r border-border">{intl.row?.std || ''}</td>
-                        <td className="px-3 py-4 text-center text-base font-black border-r border-border text-foreground">{intl.row?.eta || ''}</td>
+                        <td className="px-3 py-4 font-black text-center text-sm border-r-2 border-border text-foreground">{intl.row?.flightNo || ''}</td>
+                        <td className="px-3 py-4 whitespace-nowrap text-center text-sm text-foreground font-black border-r-2 border-border uppercase">{intl.row ? `${intl.row.from}-${intl.row.to}` : ''}</td>
+                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r-2 border-border">{intl.row?.std || ''}</td>
+                        <td className="px-3 py-4 text-center text-base font-black border-r-2 border-border text-foreground">{intl.row?.eta || ''}</td>
                         <td className={cn(
-                          "px-3 py-4 font-black text-center text-base border-r border-border",
+                          "px-3 py-4 font-black text-center text-base border-r-2 border-border",
                           intl.row && intl.row.pax < 60 ? 'text-rose-500 text-shadow-neon' : 'text-foreground/80'
                         )}>
                           {intl.row?.pax || ''}

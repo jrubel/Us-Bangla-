@@ -25,7 +25,7 @@ const FlightCharts = ({ data }: Props) => {
   if (data.length === 0) return (
     <div className="flex flex-col items-center justify-center py-32 text-slate-600">
       <BarChart3 className="w-12 h-12 mb-4 opacity-10" />
-      <p className="text-xs uppercase font-black tracking-widest opacity-20">No telemetry data available for analysis</p>
+      <p className="text-sm uppercase font-black tracking-widest opacity-20">No telemetry data available for analysis</p>
     </div>
   );
 
@@ -77,11 +77,11 @@ const FlightCharts = ({ data }: Props) => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xs font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
+              <h3 className="text-sm font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
                 <span className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_black] dark:shadow-[0_0_10px_var(--neon-cyan)]" />
                 Sector Volume Matrix
               </h3>
-              <p className="text-[10px] text-foreground/40 font-black mt-1 uppercase tracking-widest">Operational flight frequency per route</p>
+              <p className="text-xs text-foreground/40 font-black mt-1 uppercase tracking-widest">Operational flight frequency per route</p>
             </div>
           </div>
           <div className="glass-card p-6 rounded-2xl border border-border h-[380px]">
@@ -108,11 +108,11 @@ const FlightCharts = ({ data }: Props) => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xs font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
+              <h3 className="text-sm font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
                 <span className="w-2.5 h-2.5 bg-secondary rounded-full shadow-[0_0_8px_black] dark:shadow-[0_0_10px_var(--neon-magenta)]" />
                 Fleet Deployment Schema
               </h3>
-              <p className="text-[10px] text-foreground/40 font-black mt-1 uppercase tracking-widest">Aircraft platform utilization architecture</p>
+              <p className="text-xs text-foreground/40 font-black mt-1 uppercase tracking-widest">Aircraft platform utilization architecture</p>
             </div>
           </div>
           <div className="glass-card p-6 rounded-2xl border border-border h-[380px]">
@@ -140,11 +140,11 @@ const FlightCharts = ({ data }: Props) => {
       {/* Flight Schedule Timeline */}
       <div className="space-y-6 pb-8">
         <div>
-          <h3 className="text-xs font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
+          <h3 className="text-sm font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
             <span className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_8px_black] dark:shadow-[0_0_10px_var(--neon-cyan)]" />
             Tactical Asset Timeline
           </h3>
-          <p className="text-[10px] text-foreground/40 font-black mt-1 uppercase tracking-widest">24-hour synchronized aircraft rotation lifecycle</p>
+          <p className="text-xs text-foreground/40 font-black mt-1 uppercase tracking-widest">24-hour synchronized aircraft rotation lifecycle</p>
         </div>
         <div className="glass-card p-6 rounded-2xl border border-border overflow-x-auto">
           <div className="min-w-[900px]">
@@ -178,9 +178,9 @@ const FlightCharts = ({ data }: Props) => {
                     if (active && payload && payload.length) {
                       const d = payload[0].payload;
                       return (
-                        <div className="glass-card bg-card/95 text-foreground p-4 rounded-xl border border-border shadow-2xl text-[10px] space-y-3 min-w-[200px]">
+                        <div className="glass-card bg-card/95 text-foreground p-4 rounded-xl border border-border shadow-2xl text-xs space-y-3 min-w-[200px]">
                           <div className="flex justify-between items-center border-b border-border pb-2">
-                            <span className="font-black text-xs text-primary">{d.flightNo}</span>
+                            <span className="font-black text-sm text-primary">{d.flightNo}</span>
                             <span className="px-2 py-0.5 bg-foreground/5 rounded text-foreground/60 font-bold tracking-widest">{d.reg}</span>
                           </div>
                           <div className="grid grid-cols-2 gap-y-2">
