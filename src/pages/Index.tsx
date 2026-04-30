@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { parseFlightData, FlightRow, refreshFlightETAs, isInternationalFlight } from '@/lib/parseFlightData';
+import { getSectorDuration, getAvailableDestinations, AIRPORT_NAMES, getSectorName, getSectorOverrides } from '@/lib/sectorDuration';
 import FlightTable from '@/components/FlightTable';
 import PairedFlightView from '@/components/PairedFlightView';
 import FlightCharts from '@/components/FlightCharts';
@@ -9,6 +10,7 @@ import SectorDurationManager from '@/components/SectorDurationManager';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -17,10 +19,10 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plane, Table, RefreshCw, Trash2, Copy, Globe, MapPin, LayoutGrid, BarChart3, Settings, CalendarIcon, Menu, Plus } from 'lucide-react';
+import { Plane, Table, RefreshCw, Trash2, Copy, Globe, MapPin, LayoutGrid, BarChart3, Settings, CalendarIcon, Menu, Plus, Check, ChevronsUpDown } from 'lucide-react';
 
 type FilterMode = 'all' | 'departure' | 'arrival';
 type RouteType = 'all' | 'domestic' | 'international';
@@ -81,17 +83,124 @@ const Index = () => {
   });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
-  const [newFlight, setNewFlight] = useState<Partial<FlightRow>>({
+  const [isReturnLegEnabled, setIsReturnLegEnabled] = useState(false);
+  const [newFlight, setNewFlight] = useState<Partial<FlightRow & { duration: number }>>({
     flightNo: '',
-    from: '',
+    from: 'DAC',
     to: '',
     std: '',
     eta: '',
-    aircraft: '',
+    duration: 0,
+    aircraft: '-',
     reg: '',
     pax: 0,
     sn: 0
   });
+
+  const [returnFlight, setReturnFlight] = useState<Partial<FlightRow & { duration: number }>>({
+    flightNo: '',
+    std: '',
+    eta: '',
+    duration: 0,
+    pax: 0
+  });
+
+  const calculateETAFromDuration = (std: string, duration: number): string => {
+    if (!std || isNaN(duration)) return '';
+    const [h, m] = std.split(':').map(Number);
+    const totalMins = h * 60 + (m || 0) + duration;
+    const etaH = Math.floor(totalMins / 60) % 24;
+    const etaM = totalMins % 60;
+    return `${String(etaH).padStart(2, '0')}:${String(etaM).padStart(2, '0')}`;
+  };
+
+  const [originComboboxOpen, setOriginComboboxOpen] = useState(false);
+  const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [destRefreshTrigger, setDestRefreshTrigger] = useState(0);
+
+  const origins = useMemo(() => {
+    const s = new Set<string>();
+    const overrides = getSectorOverrides();
+    Object.keys(overrides).forEach(key => {
+      const from = key.split('-')[0];
+      if (from) s.add(from);
+    });
+    // Always include DAC
+    s.add('DAC');
+    return Array.from(s).sort();
+  }, [destRefreshTrigger]);
+
+  const destinations = useMemo(() => getAvailableDestinations(newFlight.from || 'DAC'), [newFlight.from, destRefreshTrigger]);
+
+  const calculateReturnFlightNo = (flightNo: string): string => {
+    const match = flightNo.match(/\d+/);
+    if (!match) return '';
+    const num = parseInt(match[0], 10);
+    // Always add +1, if result is odd, add another +1 to make it even
+    const nextNum = (num + 1) % 2 === 0 ? num + 1 : num + 2;
+    return nextNum.toString();
+  };
+
+  const updateNewFlightField = (field: keyof (FlightRow & { duration: number }), value: string | number) => {
+    const updated = { ...newFlight, [field]: value };
+    
+    if (field === 'from' || field === 'to') {
+      const dur = getSectorDuration(updated.from || '', updated.to || '');
+      if (dur) {
+        updated.duration = dur;
+        if (updated.std) {
+          updated.eta = calculateETAFromDuration(updated.std, dur);
+        }
+        // Sync duration to return leg if enabled
+        if (isReturnLegEnabled) {
+          const returnDur = getSectorDuration(updated.to || '', updated.from || '') || dur;
+          setReturnFlight(prev => {
+            const newReturn = { ...prev, duration: returnDur };
+            if (newReturn.std) {
+              newReturn.eta = calculateETAFromDuration(newReturn.std, returnDur);
+            }
+            return newReturn;
+          });
+        }
+      }
+    }
+    
+    if (field === 'std' || field === 'duration') {
+      if (updated.std && updated.duration !== undefined) {
+        updated.eta = calculateETAFromDuration(updated.std, updated.duration);
+        
+        // If duration changed, sync to return leg
+        if (field === 'duration' && isReturnLegEnabled) {
+          setReturnFlight(prev => {
+            const newReturn = { ...prev, duration: Number(updated.duration) };
+            if (newReturn.std) {
+              newReturn.eta = calculateETAFromDuration(newReturn.std, Number(updated.duration));
+            }
+            return newReturn;
+          });
+        }
+      }
+    }
+
+    if (field === 'flightNo' && isReturnLegEnabled) {
+      const returnNo = calculateReturnFlightNo(value.toString());
+      setReturnFlight(prev => ({ ...prev, flightNo: returnNo }));
+    }
+
+    setNewFlight(updated);
+  };
+
+  const updateReturnFlightField = (field: keyof (FlightRow & { duration: number }), value: string | number) => {
+    const updated = { ...returnFlight, [field]: value };
+    
+    if (field === 'std' || field === 'duration') {
+      if (updated.std && updated.duration !== undefined) {
+        updated.eta = calculateETAFromDuration(updated.std, updated.duration);
+      }
+    }
+
+    setReturnFlight(updated);
+  };
 
   const handleManualAdd = () => {
     if (!newFlight.flightNo || !newFlight.from || !newFlight.to) {
@@ -99,33 +208,68 @@ const Index = () => {
       return;
     }
 
+    const flightsToAdd: FlightRow[] = [];
+    
+    // Primary Flight
     const flightToAdd: FlightRow = {
-      flightNo: newFlight.flightNo || '',
+      flightNo: `BS${newFlight.flightNo || ''}`,
       from: newFlight.from || '',
       to: newFlight.to || '',
       std: newFlight.std || '',
       eta: newFlight.eta || '',
-      aircraft: newFlight.aircraft || '',
-      reg: newFlight.reg || '',
+      aircraft: newFlight.aircraft || '-',
+      reg: `S2-${newFlight.reg || ''}`,
       pax: Number(newFlight.pax) || 0,
       sn: data.length + 1
     };
+    flightsToAdd.push(flightToAdd);
 
-    const updated = [...data, flightToAdd];
+    // Return Flight if enabled
+    if (isReturnLegEnabled) {
+      if (!returnFlight.flightNo) {
+        toast.error('Return Flight No is required');
+        return;
+      }
+      const returnLeg: FlightRow = {
+        flightNo: `BS${returnFlight.flightNo || ''}`,
+        from: flightToAdd.to, // Swapped
+        to: flightToAdd.from, // Swapped
+        std: returnFlight.std || '',
+        eta: returnFlight.eta || '',
+        aircraft: flightToAdd.aircraft,
+        reg: flightToAdd.reg,
+        pax: Number(returnFlight.pax) || 0,
+        sn: data.length + 2
+      };
+      flightsToAdd.push(returnLeg);
+    }
+
+    const updated = [...data, ...flightsToAdd];
     setData(updated);
     localStorage.setItem('flightData', JSON.stringify(updated));
-    toast.success('Flight added manually');
+    toast.success(isReturnLegEnabled ? 'Paired flights added' : 'Flight added manually');
     setIsManualEntryOpen(false);
+    setIsReturnLegEnabled(false);
+    
+    // Reset state
     setNewFlight({
       flightNo: '',
-      from: '',
+      from: 'DAC',
       to: '',
       std: '',
       eta: '',
-      aircraft: '',
+      duration: 0,
+      aircraft: '-',
       reg: '',
       pax: 0,
       sn: 0
+    });
+    setReturnFlight({
+      flightNo: '',
+      std: '',
+      eta: '',
+      duration: 0,
+      pax: 0
     });
   };
 
@@ -267,6 +411,7 @@ const Index = () => {
   };
 
   const handleDurationUpdate = () => {
+    setDestRefreshTrigger(prev => prev + 1);
     setData(prev => {
       const updated = refreshFlightETAs(prev);
       localStorage.setItem('flightData', JSON.stringify(updated));
@@ -360,102 +505,14 @@ const Index = () => {
             <Button onClick={handleClear} variant="outline" size="sm" className="w-full h-10 text-xs font-bold uppercase tracking-wider border-border text-muted-foreground hover:bg-foreground/5">Reset</Button>
           </div>
 
-          <Dialog open={isManualEntryOpen} onOpenChange={setIsManualEntryOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full h-10 text-xs font-bold uppercase tracking-wider border-primary/30 text-primary hover:bg-primary/5 gap-2">
-                <Plus size={14} /> New Flight
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-popover border-border text-popover-foreground sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle className="text-xs font-black uppercase tracking-[0.3em] text-primary">New Flight Entry</DialogTitle>
-                <SheetDescription className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mt-1">Manual telemetry injection</SheetDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="flightNo" className="text-right text-[10px] font-black uppercase tracking-widest">Flight No</Label>
-                  <Input 
-                    id="flightNo" 
-                    value={newFlight.flightNo} 
-                    onChange={e => setNewFlight({...newFlight, flightNo: e.target.value.toUpperCase()})}
-                    className="col-span-3 h-8 text-xs bg-background/50 border-border" 
-                    placeholder="BS101"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right text-[10px] font-black uppercase tracking-widest">Vector</Label>
-                  <div className="col-span-3 flex items-center gap-2">
-                    <Input 
-                      value={newFlight.from} 
-                      onChange={e => setNewFlight({...newFlight, from: e.target.value.toUpperCase()})}
-                      className="h-8 text-xs bg-background/50 border-border text-center" 
-                      placeholder="FROM"
-                    />
-                    <span className="text-muted-foreground">/</span>
-                    <Input 
-                      value={newFlight.to} 
-                      onChange={e => setNewFlight({...newFlight, to: e.target.value.toUpperCase()})}
-                      className="h-8 text-xs bg-background/50 border-border text-center" 
-                      placeholder="TO"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right text-[10px] font-black uppercase tracking-widest">Telemetry</Label>
-                  <div className="col-span-3 flex items-center gap-2">
-                    <Input 
-                      value={newFlight.std} 
-                      onChange={e => setNewFlight({...newFlight, std: e.target.value})}
-                      className="h-8 text-xs bg-background/50 border-border text-center" 
-                      placeholder="STD"
-                      type="time"
-                    />
-                    <span className="text-muted-foreground">/</span>
-                    <Input 
-                      value={newFlight.eta} 
-                      onChange={e => setNewFlight({...newFlight, eta: e.target.value})}
-                      className="h-8 text-xs bg-background/50 border-border text-center" 
-                      placeholder="ETA"
-                      type="time"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="aircraft" className="text-right text-[10px] font-black uppercase tracking-widest">Platform</Label>
-                  <Input 
-                    id="aircraft" 
-                    value={newFlight.aircraft} 
-                    onChange={e => setNewFlight({...newFlight, aircraft: e.target.value.toUpperCase()})}
-                    className="col-span-3 h-8 text-xs bg-background/50 border-border" 
-                    placeholder="ATR72"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="reg" className="text-right text-[10px] font-black uppercase tracking-widest">Registry</Label>
-                  <Input 
-                    id="reg" 
-                    value={newFlight.reg} 
-                    onChange={e => setNewFlight({...newFlight, reg: e.target.value.toUpperCase()})}
-                    className="col-span-3 h-8 text-xs bg-background/50 border-border" 
-                    placeholder="S2-AFF"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="pax" className="text-right text-[10px] font-black uppercase tracking-widest">Payload</Label>
-                  <Input 
-                    id="pax" 
-                    type="number"
-                    value={newFlight.pax} 
-                    onChange={e => setNewFlight({...newFlight, pax: Number(e.target.value)})}
-                    className="col-span-3 h-8 text-xs bg-background/50 border-border" 
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleManualAdd} className="w-full text-xs font-black uppercase tracking-widest glow-cyan">Commit Flight</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full h-10 text-xs font-bold uppercase tracking-wider border-primary/30 text-primary hover:bg-primary/5 gap-2"
+            onClick={() => setIsManualEntryOpen(true)}
+          >
+            <Plus size={14} /> New Flight
+          </Button>
         </div>
       </div>
     </div>
@@ -576,8 +633,14 @@ const Index = () => {
             <div className="absolute -inset-px rounded-2xl bg-gradient-to-tr from-primary/10 via-transparent to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
             
             <div className="p-3 sm:p-6 h-full">
-              {activeTab === 'paired' && (
-                <PairedFlightView domestic={domesticFlights} international={internationalFlights} onUpdateReg={handleUpdateReg} dateLabel={formattedDate} />
+               {activeTab === 'paired' && (
+                <PairedFlightView 
+                  domestic={domesticFlights} 
+                  international={internationalFlights} 
+                  onUpdateReg={handleUpdateReg} 
+                  dateLabel={formattedDate}
+                  onAddFlight={() => setIsManualEntryOpen(true)} 
+                />
               )}
               
               {activeTab === 'table' && (
@@ -692,6 +755,321 @@ const Index = () => {
           </div>
         </div>
       </main>
+
+      <Dialog open={isManualEntryOpen} onOpenChange={setIsManualEntryOpen}>
+        <DialogContent className="bg-popover border-border text-popover-foreground sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xs font-black uppercase tracking-[0.3em] text-primary">New Flight Entry</DialogTitle>
+            <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mt-1">Manual telemetry injection</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Primary Leg */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">Main Sector</span>
+                <div className="h-px flex-1 bg-primary/10 ml-4"></div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="flightNo" className="text-right text-[10px] font-black uppercase tracking-widest">Flight No</Label>
+                <div className="col-span-3 flex items-center">
+                  <span className="bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-primary">BS</span>
+                  <Input 
+                    id="flightNo" 
+                    value={newFlight.flightNo} 
+                    onChange={e => updateNewFlightField('flightNo', e.target.value.toUpperCase())}
+                    className="h-8 text-xs bg-background/50 border-border rounded-l-none" 
+                    placeholder="101"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-12 items-center gap-4">
+                <Label className="col-span-3 text-right text-[10px] font-black uppercase tracking-widest">Vector</Label>
+                <div className="col-span-9 flex items-center gap-2">
+                  <Popover open={originComboboxOpen} onOpenChange={setOriginComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={originComboboxOpen}
+                        className="flex-1 h-8 text-xs bg-background/50 border-border justify-between font-bold"
+                      >
+                        <span className="font-black">{newFlight.from}</span>
+                        <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[120px] p-0 z-[110]" align="start">
+                      <Command className="bg-background border-none">
+                        <CommandInput placeholder="..." className="h-8 text-xs" />
+                        <CommandList className="max-h-[200px]">
+                          <CommandGroup>
+                            {origins.map((code) => (
+                              <CommandItem
+                                key={code}
+                                value={code}
+                                onSelect={() => {
+                                  updateNewFlightField('from', code);
+                                  setOriginComboboxOpen(false);
+                                }}
+                                className="text-[10px] font-bold py-2"
+                              >
+                                {code}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <span className="text-muted-foreground text-xs font-bold">/</span>
+                  <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={comboboxOpen}
+                        className="flex-1 h-8 text-xs bg-background/50 border-border justify-between font-bold"
+                      >
+                        {newFlight.to ? (
+                          <div className="flex items-center gap-2">
+                            <span className="font-black">{newFlight.to}</span>
+                            <span className="text-[9px] text-muted-foreground hidden sm:inline">{getSectorName(newFlight.from || 'DAC', newFlight.to)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">DEST</span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[240px] p-0 z-[110]" align="start">
+                      <Command className="bg-background border-none">
+                        <CommandInput placeholder="Search destination..." className="h-8 text-xs" />
+                        <CommandList className="max-h-[300px]">
+                          <CommandEmpty className="text-[10px] py-2 px-3">No destination found.</CommandEmpty>
+                          <CommandGroup>
+                            {destinations.map((dest) => (
+                              <CommandItem
+                                key={dest.code}
+                                value={`${dest.code} ${dest.name}`}
+                                onSelect={() => {
+                                  updateNewFlightField('to', dest.code);
+                                  setComboboxOpen(false);
+                                }}
+                                className="text-[10px] font-bold py-2"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-3 w-3",
+                                    newFlight.to === dest.code ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-black text-xs leading-none">{dest.code}</span>
+                                    <span className="text-[10px] font-mono font-black text-primary/70">{dest.duration}m</span>
+                                  </div>
+                                  <span className="text-[8px] text-muted-foreground uppercase leading-tight mt-0.5 truncate">
+                                    {dest.name}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right text-[10px] font-black uppercase tracking-widest">Telemetry</Label>
+                <div className="col-span-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Departure</Label>
+                      <Input 
+                        value={newFlight.std} 
+                        onChange={e => updateNewFlightField('std', e.target.value)}
+                        className="h-8 text-xs bg-background/50 border-border text-center px-1" 
+                        placeholder="STD"
+                        type="time"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Block Time</Label>
+                      <Input 
+                        value={newFlight.duration || ''} 
+                        onChange={e => updateNewFlightField('duration', Number(e.target.value))}
+                        className="h-8 text-xs bg-background/50 border-border text-center px-1" 
+                        placeholder="MIN"
+                        type="number"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Arrival (Auto)</Label>
+                    <Input 
+                      value={newFlight.eta} 
+                      onChange={e => updateNewFlightField('eta', e.target.value)}
+                      className="h-8 text-xs bg-background/50 border-border text-center px-1" 
+                      placeholder="ETA"
+                      type="time"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="pax" className="text-right text-[10px] font-black uppercase tracking-widest">Payload</Label>
+                <Input 
+                  id="pax" 
+                  type="number"
+                  value={newFlight.pax} 
+                  onChange={e => updateNewFlightField('pax', Number(e.target.value))}
+                  className="col-span-3 h-8 text-xs bg-background/50 border-border" 
+                />
+              </div>
+            </div>
+
+            {/* Return Leg Toggle */}
+            <div className="flex items-center justify-between p-3 bg-foreground/5 rounded-xl border border-border">
+              <div className="space-y-0.5">
+                <Label className="text-[10px] font-black text-foreground uppercase tracking-widest cursor-pointer" htmlFor="return-leg">Add Return Leg</Label>
+                <p className="text-[9px] text-muted-foreground font-bold uppercase">Automated pair creation</p>
+              </div>
+              <Switch 
+                id="return-leg"
+                checked={isReturnLegEnabled}
+                onCheckedChange={(checked) => {
+                  setIsReturnLegEnabled(checked);
+                  if (checked && newFlight.flightNo) {
+                    const returnNo = calculateReturnFlightNo(newFlight.flightNo);
+                    setReturnFlight(prev => ({ ...prev, flightNo: returnNo }));
+                  }
+                }}
+              />
+            </div>
+
+            {/* Return Leg Details */}
+            <AnimatePresence>
+              {isReturnLegEnabled && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="space-y-4 overflow-hidden"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-secondary/70">Return Leg</span>
+                    <div className="h-px flex-1 bg-secondary/10 ml-4"></div>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="ret-flightNo" className="text-right text-[10px] font-black uppercase tracking-widest">Flight No</Label>
+                    <div className="col-span-3 flex items-center">
+                      <span className="bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-secondary">BS</span>
+                      <Input 
+                        id="ret-flightNo" 
+                        value={returnFlight.flightNo} 
+                        onChange={e => updateReturnFlightField('flightNo', e.target.value.toUpperCase())}
+                        className="h-8 text-xs bg-background/50 border-border rounded-l-none" 
+                        placeholder="102"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 items-center gap-4">
+                    <Label className="col-span-3 text-right text-[10px] font-black uppercase tracking-widest">Vector</Label>
+                    <div className="col-span-9 flex items-center gap-2 opacity-80">
+                      <div className="flex-1 h-8 bg-foreground/5 border border-border rounded-md flex items-center justify-center text-[10px] font-black text-secondary">
+                        {newFlight.to || 'DEST'}
+                      </div>
+                      <span className="text-muted-foreground text-xs font-bold">/</span>
+                      <div className="flex-1 h-8 bg-foreground/5 border border-border rounded-md flex items-center justify-center text-[10px] font-black text-secondary">
+                        DAC
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right text-[10px] font-black uppercase tracking-widest">Telemetry</Label>
+                    <div className="col-span-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">DEP FROM {newFlight.to || 'DEST'}</Label>
+                          <Input 
+                            value={returnFlight.std} 
+                            onChange={e => updateReturnFlightField('std', e.target.value)}
+                            className="h-8 text-xs bg-background/50 border-border text-center px-1 font-bold" 
+                            placeholder="STD"
+                            type="time"
+                          />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Block Time</Label>
+                          <Input 
+                            value={returnFlight.duration || ''} 
+                            onChange={e => updateReturnFlightField('duration', Number(e.target.value))}
+                            className="h-8 text-xs bg-background/50 border-border text-center px-1 font-bold" 
+                            placeholder="MIN"
+                            type="number"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">ARR AT DAC (Auto)</Label>
+                        <Input 
+                          value={returnFlight.eta} 
+                          onChange={e => updateReturnFlightField('eta', e.target.value)}
+                          className="h-8 text-xs bg-background/50 border-border text-center px-1 font-bold" 
+                          placeholder="ETA"
+                          type="time"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="ret-pax" className="text-right text-[10px] font-black uppercase tracking-widest">Payload</Label>
+                    <Input 
+                      id="ret-pax" 
+                      type="number"
+                      value={returnFlight.pax} 
+                      onChange={e => updateReturnFlightField('pax', Number(e.target.value))}
+                      className="col-span-3 h-8 text-xs bg-background/50 border-border" 
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Shared Registry */}
+            <div className="pt-2 border-t border-border mt-2">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="reg" className="text-right text-[10px] font-black uppercase tracking-widest">Registry</Label>
+                <div className="col-span-3 flex items-center">
+                  <span className="bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-muted-foreground">S2-</span>
+                  <Input 
+                    id="reg" 
+                    value={newFlight.reg} 
+                    maxLength={3}
+                    onChange={e => updateNewFlightField('reg', e.target.value.toUpperCase())}
+                    className="h-8 text-xs bg-background/50 border-border rounded-l-none" 
+                    placeholder="AFF"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={handleManualAdd} className="w-full text-xs font-black uppercase tracking-widest glow-cyan h-10">Commit {isReturnLegEnabled ? 'Paired Leg' : 'Sector'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

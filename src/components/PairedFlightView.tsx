@@ -1,12 +1,13 @@
 import { FlightRow } from '@/lib/parseFlightData';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Copy, Download, Image, FileSpreadsheet } from 'lucide-react';
+import { Copy, Download, Image, FileSpreadsheet, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { getSectorName } from '@/lib/sectorDuration';
 
 const INTERNATIONAL_CONNECTING_FLIGHTS = ['BS 341', 'BS 342', 'BS 321', 'BS 322', 'BS 333', 'BS 334', 'BS 343', 'BS 344', 'BS 349', 'BS 350'];
 
@@ -15,6 +16,7 @@ interface Props {
   international: FlightRow[];
   onUpdateReg: (flightNo: string, sectorIndex: number, newReg: string) => void;
   dateLabel?: string;
+  onAddFlight?: () => void;
 }
 
 function getFlightNumParts(flightNo: string): { prefix: string; num: number } | null {
@@ -148,7 +150,7 @@ interface PairedRowMetadata {
   sn: number | null;
 }
 
-const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel }: Props) => {
+const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel, onAddFlight }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const domesticPairs = pairFlights(domestic, false);
   const internationalPairs = pairFlights(international, true);
@@ -276,6 +278,11 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel }: P
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">
+        {onAddFlight && (
+          <Button onClick={onAddFlight} variant="outline" size="sm" className="gap-2 h-10 text-xs font-black uppercase tracking-widest border-primary/30 text-primary hover:bg-primary/5 transition-all px-5">
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add Manual Leg</span><span className="sm:hidden">Add</span>
+          </Button>
+        )}
         <Button onClick={handleCopyTable} variant="outline" size="sm" className="gap-2 h-10 text-xs font-black uppercase tracking-widest border-border hover:bg-foreground/5 transition-all px-5 text-muted-foreground hover:text-foreground">
           <Copy className="w-4 h-4 text-primary" /> <span className="hidden sm:inline">Copy Telemetry</span><span className="sm:hidden">Copy</span>
         </Button>
@@ -337,7 +344,14 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel }: P
                           </td>
                         )}
                         <td className="px-3 py-4 font-black text-center text-sm border-r-2 border-border text-foreground">{d.row?.flightNo || ''}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-center text-sm text-foreground font-black border-r-2 border-border uppercase">{d.row ? `${d.row.from}-${d.row.to}` : ''}</td>
+                        <td className="px-3 py-4 whitespace-nowrap text-center border-r-2 border-border uppercase">
+                          {d.row ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm font-black text-foreground">{d.row.from}-{d.row.to}</span>
+                              <span className="text-[9px] font-bold text-foreground/30 truncate max-w-[120px]">{getSectorName(d.row.from, d.row.to)}</span>
+                            </div>
+                          ) : ''}
+                        </td>
                         <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r-2 border-border">{d.row?.std || ''}</td>
                         <td className="px-3 py-4 text-center text-base font-black border-r-2 border-border text-foreground">{d.row?.eta || ''}</td>
                         <td className={cn(
@@ -391,7 +405,14 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel }: P
                           </td>
                         )}
                         <td className="px-3 py-4 font-black text-center text-sm border-r-2 border-border text-foreground">{intl.row?.flightNo || ''}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-center text-sm text-foreground font-black border-r-2 border-border uppercase">{intl.row ? `${intl.row.from}-${intl.row.to}` : ''}</td>
+                        <td className="px-3 py-4 whitespace-nowrap text-center border-r-2 border-border uppercase">
+                          {intl.row ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm font-black text-foreground">{intl.row.from}-{intl.row.to}</span>
+                              <span className="text-[9px] font-bold text-foreground/30 truncate max-w-[120px]">{getSectorName(intl.row.from, intl.row.to)}</span>
+                            </div>
+                          ) : ''}
+                        </td>
                         <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r-2 border-border">{intl.row?.std || ''}</td>
                         <td className="px-3 py-4 text-center text-base font-black border-r-2 border-border text-foreground">{intl.row?.eta || ''}</td>
                         <td className={cn(

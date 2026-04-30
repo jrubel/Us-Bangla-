@@ -11,9 +11,100 @@ const SECTOR_DURATIONS: Record<string, number> = {
   'SPD-DAC': 60, 'ZYL-DAC': 50, 'DAC-MAA': 180, 'MAA-DAC': 180,
   'DOH-CGP': 340, 'AUH-CGP': 290, 'CGP-DOH': 160, 'CGP-DXB': 365,
   'CGP-AUH': 200, 'AUH-DAC': 410, 'DAC-MCT': 300, 'DAC-AUH': 285,
+  'DAC-BZJ': 40, 'BZJ-DAC': 40, 'DAC-IST': 450, 'IST-DAC': 550,
+  'DAC-LHR': 720, 'LHR-DAC': 660, 'DAC-JFK': 1020, 'JFK-DAC': 960,
 };
 
-const STORAGE_KEY = 'sectorDurationOverrides';
+export const AIRPORT_NAMES: Record<string, string> = {
+  'DAC': 'Dhaka', 'CGP': 'Chittagong', 'ZYL': 'Sylhet', 'JSR': 'Jessore', 
+  'RJH': 'Rajshahi', 'SPD': 'Saidpur', 'CXB': "Cox's Bazar", 'BZJ': 'Barisal',
+  'BKK': 'Bangkok', 'CAN': 'Guangzhou', 'CCU': 'Kolkata', 'MCT': 'Muscat', 
+  'DOH': 'Doha', 'DXB': 'Dubai', 'JED': 'Jeddah', 'KUL': 'Kuala Lumpur', 
+  'MLE': 'Male', 'RUH': 'Riyadh', 'SHJ': 'Sharjah', 'SIN': 'Singapore', 
+  'MAA': 'Chennai', 'AUH': 'Abu Dhabi', 'PBH': 'Paro', 'KTM': 'Kathmandu', 
+  'CMB': 'Colombo', 'IST': 'Istanbul', 'LHR': 'London', 'JFK': 'New York', 
+  'DMM': 'Dammam', 'MED': 'Medina', 'KHI': 'Karachi', 'LHE': 'Lahore', 
+  'ISB': 'Islamabad', 'KWI': 'Kuwait', 'BAH': 'Bahrain', 'HKG': 'Hong Kong', 
+  'DEL': 'Delhi', 'BOM': 'Mumbai', 'BLR': 'Bangalore', 'HYD': 'Hyderabad', 
+  'PNH': 'Phnom Penh', 'HAN': 'Hanoi', 'SGN': 'Ho Chi Minh', 'MNL': 'Manila', 
+  'ICN': 'Seoul', 'NRT': 'Tokyo', 'SYD': 'Sydney', 'MEL': 'Melbourne', 
+  'PER': 'Perth', 'KKB': 'Kish City', 'THU': 'Thiruvananthapuram', 'COK': 'Kochi',
+  'CNN': 'Kannur', 'TRZ': 'Tiruchirappalli', 'CJB': 'Coimbatore',
+  'BGM': 'Bagerhat', 'TGL': 'Tangail', 'COM': 'Comilla', 'FEN': 'Feni'
+};
+
+export const STORAGE_KEY = 'sectorDurationOverrides';
+export const NAME_STORAGE_KEY = 'sectorNameOverrides';
+
+export function getSectorOverrides(): Record<string, number> {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function getNameOverrides(): Record<string, string> {
+  try {
+    const saved = localStorage.getItem(NAME_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
+
+export interface SectorInfo {
+  code: string;
+  name: string;
+  key: string;
+  duration: number;
+}
+
+export function getAvailableDestinations(from: string = 'DAC'): SectorInfo[] {
+  const sectors = new Set<string>();
+  const origin = from.toUpperCase();
+  
+  try {
+    const savedOverrides = localStorage.getItem('sectorDurationOverrides');
+    if (savedOverrides) {
+      const overrides = JSON.parse(savedOverrides);
+      Object.keys(overrides).forEach(key => {
+        sectors.add(key.toUpperCase());
+      });
+    }
+  } catch (e) {
+    console.error('Error loading custom sectors:', e);
+  }
+
+  const nameOverrides = getNameOverrides();
+  const durationOverrides = getSectorOverrides();
+  
+  // Collect unique destinations from sectors that start with the specified origin
+  return Array.from(sectors)
+    .filter(key => key.startsWith(`${origin}-`))
+    .map(key => {
+      const to = key.split('-')[1] || '';
+      return {
+        code: to,
+        name: getSectorName(origin, to, nameOverrides),
+        key: key,
+        duration: durationOverrides[key] || SECTOR_DURATIONS[key] || 0
+      };
+    })
+    .sort((a, b) => a.code.localeCompare(b.code));
+}
+
+
+export function getSectorName(from: string, to: string, providedOverrides?: Record<string, string>): string {
+  const key = `${from.toUpperCase()}-${to.toUpperCase()}`;
+  const overrides = providedOverrides || getNameOverrides();
+  if (key in overrides) return overrides[key];
+
+  const fromCity = AIRPORT_NAMES[from.toUpperCase()] || from.toUpperCase();
+  const toCity = AIRPORT_NAMES[to.toUpperCase()] || to.toUpperCase();
+  return `${fromCity} - ${toCity}`;
+}
 
 function getEffectiveDuration(from: string, to: string): number | null {
   const key = `${from.toUpperCase()}-${to.toUpperCase()}`;

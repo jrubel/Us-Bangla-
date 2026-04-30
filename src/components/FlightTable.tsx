@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { Globe, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
+import { getSectorName } from "@/lib/sectorDuration";
 
 interface FlightTableProps {
   data: FlightRow[];
@@ -18,7 +19,7 @@ const FlightTable = ({ data, onDelete }: FlightTableProps) => {
           <TableRow className="hover:bg-transparent border-b-2 border-border font-bold overflow-hidden">
             <TableHead className="w-[70px] text-center text-xs font-black uppercase tracking-widest h-14 text-foreground/50 border-r-2 border-border">SN</TableHead>
             <TableHead className="text-xs font-black uppercase tracking-widest h-14 text-foreground/50 border-r-2 border-border px-5">Flight Telemetry</TableHead>
-            <TableHead className="text-xs font-black uppercase tracking-widest h-14 text-foreground/50 border-r-2 border-border px-5">Vector</TableHead>
+            <TableHead className="text-xs font-black uppercase tracking-widest h-14 text-foreground/50 border-r-2 border-border px-5">Vector & Sector</TableHead>
             <TableHead className="text-xs font-black uppercase tracking-widest h-14 text-foreground/50 border-r-2 border-border text-center">STD</TableHead>
             <TableHead className="text-xs font-black uppercase tracking-widest h-14 text-foreground/50 border-r-2 border-border text-center">ETA</TableHead>
             <TableHead className="text-xs font-black uppercase tracking-widest h-14 text-foreground/50 border-r-2 border-border text-center">Platform</TableHead>
@@ -30,6 +31,7 @@ const FlightTable = ({ data, onDelete }: FlightTableProps) => {
         <TableBody className="font-mono">
           {data.map((row) => {
             const isIntl = isInternationalFlight(row);
+            const sectorName = getSectorName(row.from, row.to);
             return (
               <TableRow 
                 key={`${row.flightNo}-${row.from}-${row.to}`}
@@ -43,10 +45,15 @@ const FlightTable = ({ data, onDelete }: FlightTableProps) => {
                   </div>
                 </TableCell>
                 <TableCell className="text-sm py-4 border-r-2 border-border px-4">
-                  <div className="flex items-center gap-1.5 font-black uppercase">
-                    <span className="text-foreground">{row.from}</span>
-                    <span className="text-foreground/40">⇢</span>
-                    <span className="text-foreground">{row.to}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1.5 font-black uppercase">
+                      <span className="text-foreground">{row.from}</span>
+                      <span className="text-foreground/40">⇢</span>
+                      <span className="text-foreground">{row.to}</span>
+                    </div>
+                    <span className="text-[10px] font-black uppercase text-foreground/30 tracking-widest leading-none truncate max-w-[150px]">
+                      {sectorName}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell className="text-sm font-black text-foreground py-4 border-r-2 border-border text-center">{row.std}</TableCell>
