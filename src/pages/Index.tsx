@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plane, Table, RefreshCw, Trash2, Copy, Globe, MapPin, LayoutGrid, BarChart3, Settings, CalendarIcon, Menu, Plus, Check, ChevronsUpDown } from 'lucide-react';
+import { Plane, Table, RefreshCw, Trash2, Copy, Globe, MapPin, LayoutGrid, BarChart3, Settings, CalendarIcon, Menu, Plus, Check, ChevronsUpDown, LogOut } from 'lucide-react';
 
 type FilterMode = 'all' | 'departure' | 'arrival';
 type RouteType = 'all' | 'domestic' | 'international';
@@ -446,7 +446,7 @@ const Index = () => {
           </div>
           <div>
             <h1 className="text-xl font-black tracking-tight text-foreground uppercase leading-none">Us Bangla</h1>
-            <p className="text-[11px] font-bold text-primary/70 uppercase tracking-[0.2em] mt-1">Flight Analysis</p>
+            <p className="text-[11px] font-bold text-primary/70 uppercase tracking-[0.2em] mt-1">Morning Load Project</p>
           </div>
         </div>
         
@@ -589,6 +589,18 @@ const Index = () => {
                 <Calendar mode="single" selected={selectedDate} onSelect={handleDateChange} initialFocus className="bg-popover text-popover-foreground" />
               </PopoverContent>
             </Popover>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+              onClick={() => {
+                localStorage.removeItem('auth_session');
+                window.location.reload();
+              }}
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </header>
 
