@@ -62,6 +62,7 @@ const isFlightInShift = (flight: FlightRow, shift: ShiftMode): boolean => {
   return true;
 };
 
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState('paired');
   const [input, setInput] = useState(() => localStorage.getItem('flightInput') || '');
@@ -83,6 +84,7 @@ const Index = () => {
   });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [isReturnLegEnabled, setIsReturnLegEnabled] = useState(false);
   const [newFlight, setNewFlight] = useState<Partial<FlightRow & { duration: number }>>({
     flightNo: '',
@@ -168,17 +170,17 @@ const Index = () => {
     if (field === 'std' || field === 'duration') {
       if (updated.std && updated.duration !== undefined) {
         updated.eta = calculateETAFromDuration(updated.std, updated.duration);
-        
-        // If duration changed, sync to return leg
-        if (field === 'duration' && isReturnLegEnabled) {
-          setReturnFlight(prev => {
-            const newReturn = { ...prev, duration: Number(updated.duration) };
-            if (newReturn.std) {
-              newReturn.eta = calculateETAFromDuration(newReturn.std, Number(updated.duration));
-            }
-            return newReturn;
-          });
-        }
+      }
+      
+      // If duration changed, sync to return leg
+      if (field === 'duration' && isReturnLegEnabled) {
+        setReturnFlight(prev => {
+          const newReturn = { ...prev, duration: Number(updated.duration) };
+          if (newReturn.std) {
+            newReturn.eta = calculateETAFromDuration(newReturn.std, Number(updated.duration));
+          }
+          return newReturn;
+        });
       }
     }
 
@@ -425,6 +427,18 @@ const Index = () => {
     localStorage.setItem('flightData', JSON.stringify(updated));
     toast.success('Flight removed');
   };
+  
+  const handleUpdateFlight = (flightNo: string, from: string, to: string, field: 'std' | 'eta' | 'pax', value: string | number) => {
+    setData(prev => {
+      const updated = prev.map(row => 
+        (row.flightNo === flightNo && row.from === from && row.to === to) 
+          ? { ...row, [field]: value } 
+          : row
+      );
+      localStorage.setItem('flightData', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   const handleCopy = () => {
     if (renumbered.length === 0) return;
@@ -589,6 +603,17 @@ const Index = () => {
                 <Calendar mode="single" selected={selectedDate} onSelect={handleDateChange} initialFocus className="bg-popover text-popover-foreground" />
               </PopoverContent>
             </Popover>
+
+            <div className="flex items-center space-x-2 bg-background/50 border border-border/50 rounded-lg px-3 h-9 shrink-0">
+              <Label htmlFor="edit-mode" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">Edit Mode</Label>
+              <Switch 
+                id="edit-mode" 
+                checked={isEditMode} 
+                onCheckedChange={setIsEditMode}
+                className="data-[state=checked]:bg-primary"
+              />
+            </div>
+
             <Button 
               variant="ghost" 
               size="icon" 
@@ -650,6 +675,9 @@ const Index = () => {
                   domestic={domesticFlights} 
                   international={internationalFlights} 
                   onUpdateReg={handleUpdateReg} 
+                  onDelete={handleDeleteFlight}
+                  onUpdateFlight={handleUpdateFlight}
+                  isEditMode={isEditMode}
                   dateLabel={formattedDate}
                   onAddFlight={() => setIsManualEntryOpen(true)} 
                 />
@@ -957,9 +985,23 @@ const Index = () => {
                 checked={isReturnLegEnabled}
                 onCheckedChange={(checked) => {
                   setIsReturnLegEnabled(checked);
-                  if (checked && newFlight.flightNo) {
-                    const returnNo = calculateReturnFlightNo(newFlight.flightNo);
-                    setReturnFlight(prev => ({ ...prev, flightNo: returnNo }));
+                  if (checked) {
+                    const returnNo = newFlight.flightNo ? calculateReturnFlightNo(newFlight.flightNo) : '';
+                    const returnDur = (newFlight.from && newFlight.to) 
+                      ? (getSectorDuration(newFlight.to, newFlight.from) || newFlight.duration || 0) 
+                      : (newFlight.duration || 0);
+                    
+                    setReturnFlight(prev => {
+                      const newReturn = { 
+                        ...prev, 
+                        flightNo: returnNo,
+                        duration: returnDur
+                      };
+                      if (newReturn.std && newReturn.duration) {
+                        newReturn.eta = calculateETAFromDuration(newReturn.std, newReturn.duration);
+                      }
+                      return newReturn;
+                    });
                   }
                 }}
               />

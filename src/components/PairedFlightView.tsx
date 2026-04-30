@@ -1,7 +1,7 @@
 import { FlightRow } from '@/lib/parseFlightData';
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Copy, Download, Image, FileSpreadsheet, Plus } from 'lucide-react';
+import { Copy, Download, Image, FileSpreadsheet, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
 import * as XLSX from 'xlsx';
@@ -15,6 +15,9 @@ interface Props {
   domestic: FlightRow[];
   international: FlightRow[];
   onUpdateReg: (flightNo: string, sectorIndex: number, newReg: string) => void;
+  onUpdateFlight?: (flightNo: string, from: string, to: string, field: 'std' | 'eta' | 'pax', value: string | number) => void;
+  onDelete?: (flightNo: string, from: string, to: string) => void;
+  isEditMode?: boolean;
   dateLabel?: string;
   onAddFlight?: () => void;
 }
@@ -150,7 +153,7 @@ interface PairedRowMetadata {
   sn: number | null;
 }
 
-const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel, onAddFlight }: Props) => {
+const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight, onDelete, isEditMode, dateLabel, onAddFlight }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const domesticPairs = pairFlights(domestic, false);
   const internationalPairs = pairFlights(international, true);
@@ -319,6 +322,7 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel, onA
                   <thead>
                     <tr className="bg-foreground/5 text-foreground/60 border-b-2 border-border">
                       {headers.map(h => <th key={`d-h-${h}`} className="px-3 py-4 border-r-2 border-border text-center text-xs font-black uppercase tracking-wider">{h}</th>)}
+                      {onDelete && <th className="px-1 py-1 border-border text-center text-[8px] font-black uppercase tracking-widest w-8"></th>}
                     </tr>
                   </thead>
                   <tbody className="font-mono text-foreground/80">
@@ -352,14 +356,59 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel, onA
                             </div>
                           ) : ''}
                         </td>
-                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r-2 border-border">{d.row?.std || ''}</td>
-                        <td className="px-3 py-4 text-center text-base font-black border-r-2 border-border text-foreground">{d.row?.eta || ''}</td>
+                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r-2 border-border">
+                          {isEditMode && d.row ? (
+                            <input
+                              type="text"
+                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              value={d.row.std}
+                              onChange={(e) => onUpdateFlight?.(d.row!.flightNo, d.row!.from, d.row!.to, 'std', e.target.value)}
+                            />
+                          ) : (
+                            d.row?.std || ''
+                          )}
+                        </td>
+                        <td className="px-3 py-4 text-center text-base font-black border-r-2 border-border text-foreground">
+                          {isEditMode && d.row ? (
+                            <input
+                              type="text"
+                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              value={d.row.eta}
+                              onChange={(e) => onUpdateFlight?.(d.row!.flightNo, d.row!.from, d.row!.to, 'eta', e.target.value)}
+                            />
+                          ) : (
+                            d.row?.eta || ''
+                          )}
+                        </td>
                         <td className={cn(
                           "px-3 py-4 font-black text-center text-base border-r-2 border-border",
-                          d.row && d.row.pax < 60 ? 'text-rose-500 text-shadow-neon' : 'text-foreground/80'
+                          d.row && d.row.pax < 60 ? 'text-shadow-neon text-rose-500' : 'text-foreground/80'
                         )}>
-                          {d.row?.pax || ''}
+                          {isEditMode && d.row ? (
+                            <input
+                              type="number"
+                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              value={d.row.pax}
+                              onChange={(e) => onUpdateFlight?.(d.row!.flightNo, d.row!.from, d.row!.to, 'pax', parseInt(e.target.value) || 0)}
+                            />
+                          ) : (
+                            d.row?.pax || ''
+                          )}
                         </td>
+                        {onDelete && (
+                          <td className="px-1 py-1 text-center">
+                            {d.row && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-rose-500 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                onClick={() => onDelete(d.row!.flightNo, d.row!.from, d.row!.to)}
+                              >
+                                <Trash2 size={12} />
+                              </Button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -380,6 +429,7 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel, onA
                   <thead>
                     <tr className="bg-foreground/5 text-foreground/60 border-b-2 border-border">
                       {headers.map(h => <th key={`i-h-${h}`} className="px-3 py-4 border-r-2 border-border text-center text-xs font-black uppercase tracking-wider">{h}</th>)}
+                      {onDelete && <th className="px-1 py-1 border-border text-center text-[8px] font-black uppercase tracking-widest w-8"></th>}
                     </tr>
                   </thead>
                   <tbody className="font-mono text-foreground/80">
@@ -413,14 +463,59 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, dateLabel, onA
                             </div>
                           ) : ''}
                         </td>
-                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r-2 border-border">{intl.row?.std || ''}</td>
-                        <td className="px-3 py-4 text-center text-base font-black border-r-2 border-border text-foreground">{intl.row?.eta || ''}</td>
+                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r-2 border-border">
+                          {isEditMode && intl.row ? (
+                            <input
+                              type="text"
+                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              value={intl.row.std}
+                              onChange={(e) => onUpdateFlight?.(intl.row!.flightNo, intl.row!.from, intl.row!.to, 'std', e.target.value)}
+                            />
+                          ) : (
+                            intl.row?.std || ''
+                          )}
+                        </td>
+                        <td className="px-3 py-4 text-center text-base font-black border-r-2 border-border text-foreground">
+                          {isEditMode && intl.row ? (
+                            <input
+                              type="text"
+                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              value={intl.row.eta}
+                              onChange={(e) => onUpdateFlight?.(intl.row!.flightNo, intl.row!.from, intl.row!.to, 'eta', e.target.value)}
+                            />
+                          ) : (
+                            intl.row?.eta || ''
+                          )}
+                        </td>
                         <td className={cn(
                           "px-3 py-4 font-black text-center text-base border-r-2 border-border",
-                          intl.row && intl.row.pax < 60 ? 'text-rose-500 text-shadow-neon' : 'text-foreground/80'
+                          intl.row && intl.row.pax < 60 ? 'text-shadow-neon text-rose-500' : 'text-foreground/80'
                         )}>
-                          {intl.row?.pax || ''}
+                          {isEditMode && intl.row ? (
+                            <input
+                              type="number"
+                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              value={intl.row.pax}
+                              onChange={(e) => onUpdateFlight?.(intl.row!.flightNo, intl.row!.from, intl.row!.to, 'pax', parseInt(e.target.value) || 0)}
+                            />
+                          ) : (
+                            intl.row?.pax || ''
+                          )}
                         </td>
+                        {onDelete && (
+                          <td className="px-1 py-1 text-center">
+                            {intl.row && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-rose-500 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                onClick={() => onDelete(intl.row!.flightNo, intl.row!.from, intl.row!.to)}
+                              >
+                                <Trash2 size={12} />
+                              </Button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
