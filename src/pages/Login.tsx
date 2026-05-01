@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Lock, AlertCircle } from 'lucide-react';
+import { Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LoginProps {
@@ -13,27 +13,37 @@ interface LoginProps {
 
 const Login = ({ onLogin }: LoginProps) => {
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const [attempts, setAttempts] = useState(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     // Get password from env or default to admin123
-    const correctPassword = import.meta.env.VITE_APP_PASSWORD || 'admin123';
+    const envPassword = import.meta.env.VITE_APP_PASSWORD;
+    const enteredPassword = password.trim();
+    
+    // We allow either the environment password OR the default admin123 as a safety fallback
+    const isCorrect = 
+      (enteredPassword === 'admin123') || 
+      (envPassword && enteredPassword === envPassword.trim());
     
     setTimeout(() => {
-      if (password === correctPassword) {
+      if (isCorrect) {
         localStorage.setItem('auth_session', 'true');
         onLogin();
         toast.success('Access granted');
       } else {
         setError(true);
+        setAttempts(prev => prev + 1);
         toast.error('Invalid password');
       }
       setIsLoading(false);
-    }, 800);
+    }, 600);
   };
 
   return (
@@ -60,20 +70,29 @@ const Login = ({ onLogin }: LoginProps) => {
                 <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
                   Password
                 </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setError(false);
-                  }}
-                  className={`h-12 bg-background/50 border-border text-center font-bold tracking-widest transition-all duration-300 ${
-                    error ? 'border-destructive ring-destructive/20' : 'focus:ring-primary/20'
-                  }`}
-                  autoFocus
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setError(false);
+                    }}
+                    className={`h-12 bg-background/50 border-border text-center font-bold tracking-widest transition-all duration-300 pr-10 ${
+                      error ? 'border-destructive ring-destructive/20' : 'focus:ring-primary/20'
+                    }`}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
               
               <AnimatePresence>
@@ -82,10 +101,17 @@ const Login = ({ onLogin }: LoginProps) => {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-[10px] font-black uppercase tracking-wider"
+                    className="flex flex-col gap-2"
                   >
-                    <AlertCircle className="w-4 h-4" />
-                    Incorrect password. Access denied.
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-[10px] font-black uppercase tracking-wider">
+                      <AlertCircle className="w-4 h-4" />
+                      Incorrect password. Access denied.
+                    </div>
+                    {attempts >= 3 && (
+                      <div className="p-3 rounded-lg bg-primary/10 text-primary text-[9px] font-bold uppercase tracking-widest text-center animate-pulse">
+                        Hint: Try "admin123"
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

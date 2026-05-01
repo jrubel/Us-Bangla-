@@ -86,6 +86,7 @@ const Index = () => {
   const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isReturnLegEnabled, setIsReturnLegEnabled] = useState(false);
+  const [isViaCGPEnabled, setIsViaCGPEnabled] = useState(false);
   const [newFlight, setNewFlight] = useState<Partial<FlightRow & { duration: number }>>({
     flightNo: '',
     from: 'DAC',
@@ -165,6 +166,9 @@ const Index = () => {
           });
         }
       }
+      if (field === 'to' && !['DXB', 'AUH', 'MCT', 'DOH'].includes(updated.to || '')) {
+        setIsViaCGPEnabled(false);
+      }
     }
     
     if (field === 'std' || field === 'duration') {
@@ -212,46 +216,121 @@ const Index = () => {
 
     const flightsToAdd: FlightRow[] = [];
     
-    // Primary Flight
-    const flightToAdd: FlightRow = {
-      flightNo: `BS${newFlight.flightNo || ''}`,
-      from: newFlight.from || '',
-      to: newFlight.to || '',
-      std: newFlight.std || '',
-      eta: newFlight.eta || '',
-      aircraft: newFlight.aircraft || '-',
-      reg: `S2-${newFlight.reg || ''}`,
-      pax: Number(newFlight.pax) || 0,
-      sn: data.length + 1
-    };
-    flightsToAdd.push(flightToAdd);
+    if (isViaCGPEnabled) {
+      // Logic for multi-sector via CGP: from -> CGP -> to
+      // Outbound Leg 1: from -> CGP
+      const sector1Dur = getSectorDuration(newFlight.from || '', 'CGP') || 55;
+      const sector1Eta = calculateETAFromDuration(newFlight.std || '00:00', sector1Dur);
+      
+      const outboundSector1: FlightRow = {
+        flightNo: `BS${newFlight.flightNo}`,
+        from: newFlight.from || '',
+        to: 'CGP',
+        std: newFlight.std || '',
+        eta: sector1Eta,
+        aircraft: newFlight.aircraft || '-',
+        reg: `S2-${newFlight.reg || ''}`,
+        pax: Math.floor(Number(newFlight.pax) * 0.4) || 0, // Assume some split or let user edit later
+        sn: data.length + 1
+      };
+      flightsToAdd.push(outboundSector1);
 
-    // Return Flight if enabled
-    if (isReturnLegEnabled) {
-      if (!returnFlight.flightNo) {
-        toast.error('Return Flight No is required');
-        return;
-      }
-      const returnLeg: FlightRow = {
-        flightNo: `BS${returnFlight.flightNo || ''}`,
-        from: flightToAdd.to, // Swapped
-        to: flightToAdd.from, // Swapped
-        std: returnFlight.std || '',
-        eta: returnFlight.eta || '',
-        aircraft: flightToAdd.aircraft,
-        reg: flightToAdd.reg,
-        pax: Number(returnFlight.pax) || 0,
+      // Outbound Leg 2: CGP -> to
+      // 60 min ground time at CGP
+      const groundTime = 60;
+      const sector2Std = calculateETAFromDuration(sector1Eta, groundTime);
+      const sector2Dur = getSectorDuration('CGP', newFlight.to || '') || 360;
+      const sector2Eta = calculateETAFromDuration(sector2Std, sector2Dur);
+
+      const outboundSector2: FlightRow = {
+        flightNo: `BS${newFlight.flightNo}`,
+        from: 'CGP',
+        to: newFlight.to || '',
+        std: sector2Std,
+        eta: sector2Eta,
+        aircraft: newFlight.aircraft || '-',
+        reg: `S2-${newFlight.reg || ''}`,
+        pax: Number(newFlight.pax) || 0,
         sn: data.length + 2
       };
-      flightsToAdd.push(returnLeg);
+      flightsToAdd.push(outboundSector2);
+
+      // Return Leg via CGP
+      if (isReturnLegEnabled) {
+        // Return Leg 1: to -> CGP
+        const retSector1Dur = getSectorDuration(newFlight.to || '', 'CGP') || 360;
+        const retSector1Eta = calculateETAFromDuration(returnFlight.std || '00:00', retSector1Dur);
+
+        const returnSector1: FlightRow = {
+          flightNo: `BS${returnFlight.flightNo}`,
+          from: newFlight.to || '',
+          to: 'CGP',
+          std: returnFlight.std || '',
+          eta: retSector1Eta,
+          aircraft: newFlight.aircraft || '-',
+          reg: `S2-${newFlight.reg || ''}`,
+          pax: Number(returnFlight.pax) || 0,
+          sn: data.length + 3
+        };
+        flightsToAdd.push(returnSector1);
+
+        // Return Leg 2: CGP -> from
+        const retSector2Std = calculateETAFromDuration(retSector1Eta, groundTime);
+        const retSector2Dur = getSectorDuration('CGP', newFlight.from || '') || 55;
+        const retSector2Eta = calculateETAFromDuration(retSector2Std, retSector2Dur);
+
+        const returnSector2: FlightRow = {
+          flightNo: `BS${returnFlight.flightNo}`,
+          from: 'CGP',
+          to: newFlight.from || '',
+          std: retSector2Std,
+          eta: retSector2Eta,
+          aircraft: newFlight.aircraft || '-',
+          reg: `S2-${newFlight.reg || ''}`,
+          pax: Math.floor(Number(returnFlight.pax) * 0.4) || 0,
+          sn: data.length + 4
+        };
+        flightsToAdd.push(returnSector2);
+      }
+    } else {
+      // Standard Direct Flight
+      const flightToAdd: FlightRow = {
+        flightNo: `BS${newFlight.flightNo}`,
+        from: newFlight.from || '',
+        to: newFlight.to || '',
+        std: newFlight.std || '',
+        eta: newFlight.eta || '',
+        aircraft: newFlight.aircraft || '-',
+        reg: `S2-${newFlight.reg || ''}`,
+        pax: Number(newFlight.pax) || 0,
+        sn: data.length + 1
+      };
+      flightsToAdd.push(flightToAdd);
+
+      if (isReturnLegEnabled) {
+        const retFlightToAdd: FlightRow = {
+          flightNo: `BS${returnFlight.flightNo}`,
+          from: newFlight.to || '',
+          to: newFlight.from || '',
+          std: returnFlight.std || '',
+          eta: returnFlight.eta || '',
+          aircraft: newFlight.aircraft || '-',
+          reg: `S2-${newFlight.reg || ''}`,
+          pax: Number(returnFlight.pax) || 0,
+          sn: data.length + 2
+        };
+        flightsToAdd.push(retFlightToAdd);
+      }
     }
 
     const updated = [...data, ...flightsToAdd];
     setData(updated);
     localStorage.setItem('flightData', JSON.stringify(updated));
-    toast.success(isReturnLegEnabled ? 'Paired flights added' : 'Flight added manually');
+    toast.success(isReturnLegEnabled ? 'Flights added with return' : 'Flight added');
+    
     setIsManualEntryOpen(false);
     setIsReturnLegEnabled(false);
+    setIsViaCGPEnabled(false);
     
     // Reset state
     setNewFlight({
@@ -975,36 +1054,53 @@ const Index = () => {
             </div>
 
             {/* Return Leg Toggle */}
-            <div className="flex items-center justify-between p-3 bg-foreground/5 rounded-xl border border-border">
-              <div className="space-y-0.5">
-                <Label className="text-[10px] font-black text-foreground uppercase tracking-widest cursor-pointer" htmlFor="return-leg">Add Return Leg</Label>
-                <p className="text-[9px] text-muted-foreground font-bold uppercase">Automated pair creation</p>
+            <div className="flex flex-col gap-3 p-3 bg-foreground/5 rounded-xl border border-border">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-[10px] font-black text-foreground uppercase tracking-widest cursor-pointer" htmlFor="return-leg">Add Return Leg</Label>
+                  <p className="text-[9px] text-muted-foreground font-bold uppercase">Automated pair creation</p>
+                </div>
+                <Switch 
+                  id="return-leg"
+                  checked={isReturnLegEnabled}
+                  onCheckedChange={(checked) => {
+                    setIsReturnLegEnabled(checked);
+                    if (checked) {
+                      const returnNo = newFlight.flightNo ? calculateReturnFlightNo(newFlight.flightNo) : '';
+                      const returnDur = (newFlight.from && newFlight.to) 
+                        ? (getSectorDuration(newFlight.to, newFlight.from) || newFlight.duration || 0) 
+                        : (newFlight.duration || 0);
+                      
+                      setReturnFlight(prev => {
+                        const newReturn = { 
+                          ...prev, 
+                          flightNo: returnNo,
+                          duration: returnDur
+                        };
+                        if (newReturn.std && newReturn.duration) {
+                          newReturn.eta = calculateETAFromDuration(newReturn.std, newReturn.duration);
+                        }
+                        return newReturn;
+                      });
+                    }
+                  }}
+                />
               </div>
-              <Switch 
-                id="return-leg"
-                checked={isReturnLegEnabled}
-                onCheckedChange={(checked) => {
-                  setIsReturnLegEnabled(checked);
-                  if (checked) {
-                    const returnNo = newFlight.flightNo ? calculateReturnFlightNo(newFlight.flightNo) : '';
-                    const returnDur = (newFlight.from && newFlight.to) 
-                      ? (getSectorDuration(newFlight.to, newFlight.from) || newFlight.duration || 0) 
-                      : (newFlight.duration || 0);
-                    
-                    setReturnFlight(prev => {
-                      const newReturn = { 
-                        ...prev, 
-                        flightNo: returnNo,
-                        duration: returnDur
-                      };
-                      if (newReturn.std && newReturn.duration) {
-                        newReturn.eta = calculateETAFromDuration(newReturn.std, newReturn.duration);
-                      }
-                      return newReturn;
-                    });
-                  }
-                }}
-              />
+
+              {/* Via CGP Toggle - Only for specific destinations or from DAC */}
+              {['DXB', 'AUH', 'MCT', 'DOH'].includes(newFlight.to || '') && (
+                <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                  <div className="space-y-0.5">
+                    <Label className="text-[10px] font-black text-foreground uppercase tracking-widest cursor-pointer" htmlFor="via-cgp">Via CGP (Chittagong)</Label>
+                    <p className="text-[9px] text-muted-foreground font-bold uppercase">Multi-sector connecting flight</p>
+                  </div>
+                  <Switch 
+                    id="via-cgp"
+                    checked={isViaCGPEnabled}
+                    onCheckedChange={setIsViaCGPEnabled}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Return Leg Details */}
