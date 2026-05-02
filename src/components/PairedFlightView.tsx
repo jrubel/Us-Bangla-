@@ -48,6 +48,7 @@ function pairFlights(flights: FlightRow[], isInternational: boolean): FlightRow[
   }
   const departures = flights.filter(f => f.from === 'DAC');
   const arrivals = flights.filter(f => f.to === 'DAC');
+  const others = flights.filter(f => f.from !== 'DAC' && f.to !== 'DAC');
   const paired: FlightRow[][] = [];
   const usedArrivals = new Set<number>();
 
@@ -70,6 +71,9 @@ function pairFlights(flights: FlightRow[], isInternational: boolean): FlightRow[
   arrivals.forEach((arr, i) => {
     if (!usedArrivals.has(i)) paired.push([arr]);
   });
+  
+  // Add others
+  others.forEach(f => paired.push([f]));
 
   return sortPairsBySTD(paired);
 }
@@ -352,7 +356,6 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                           {d.row ? (
                             <div className="flex flex-col">
                               <span className="text-sm font-black text-foreground">{d.row.from}-{d.row.to}</span>
-                              <span className="text-[9px] font-bold text-foreground/30 truncate max-w-[120px]">{getSectorName(d.row.from, d.row.to)}</span>
                             </div>
                           ) : ''}
                         </td>
@@ -459,7 +462,6 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                           {intl.row ? (
                             <div className="flex flex-col">
                               <span className="text-sm font-black text-foreground">{intl.row.from}-{intl.row.to}</span>
-                              <span className="text-[9px] font-bold text-foreground/30 truncate max-w-[120px]">{getSectorName(intl.row.from, intl.row.to)}</span>
                             </div>
                           ) : ''}
                         </td>

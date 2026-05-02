@@ -51,9 +51,6 @@ const FlightTable = ({ data, onDelete }: FlightTableProps) => {
                       <span className="text-foreground/40">⇢</span>
                       <span className="text-foreground">{row.to}</span>
                     </div>
-                    <span className="text-[10px] font-black uppercase text-foreground/30 tracking-widest leading-none truncate max-w-[150px]">
-                      {sectorName}
-                    </span>
                   </div>
                 </TableCell>
                 <TableCell className="text-sm font-black text-foreground py-4 border-r-2 border-border text-center">{row.std}</TableCell>

@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plane, Table, RefreshCw, Trash2, Copy, Globe, MapPin, LayoutGrid, BarChart3, Settings, CalendarIcon, Menu, Plus, Check, ChevronsUpDown, LogOut } from 'lucide-react';
+import { Plane, Table, RefreshCw, Trash2, Copy, Globe, MapPin, LayoutGrid, BarChart3, Settings, CalendarIcon, Menu, Plus, Check, ChevronsUpDown, LogOut, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 
 type FilterMode = 'all' | 'departure' | 'arrival';
 type RouteType = 'all' | 'domestic' | 'international';
@@ -63,6 +63,213 @@ const isFlightInShift = (flight: FlightRow, shift: ShiftMode): boolean => {
 };
 
 
+const NiceTimeInput = ({ 
+  label, 
+  value, 
+  onChange, 
+  className,
+  error
+}: { 
+  label: string; 
+  value: string; 
+  onChange: (val: string) => void;
+  className?: string;
+  error?: string;
+}) => {
+  const [h, m] = value && value.includes(':') ? value.split(':').map(Number) : [0, 0];
+  const [pickerMode, setPickerMode] = useState<'shortcuts' | 'clock'>('clock');
+
+  const adjust = (type: 'h' | 'm', amount: number) => {
+    if (type === 'h') {
+      const newH = (h + amount + 24) % 24;
+      onChange(`${String(newH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    } else {
+      const newM = (m + amount + 60) % 60;
+      onChange(`${String(h).padStart(2, '0')}:${String(newM).padStart(2, '0')}`);
+    }
+  };
+
+  const handleType = (type: 'h' | 'm', val: string) => {
+    const num = parseInt(val.replace(/\D/g, '').slice(0, 2)) || 0;
+    if (type === 'h') {
+      const clamped = Math.min(23, Math.max(0, num));
+      onChange(`${String(clamped).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    } else {
+      const clamped = Math.min(59, Math.max(0, num));
+      onChange(`${String(h).padStart(2, '0')}:${String(clamped).padStart(2, '0')}`);
+    }
+  };
+
+  const ClockFace = ({ type, val, onSel }: { type: 'h' | 'm', val: number, onSel: (v: number) => void }) => {
+    const items = type === 'h' ? [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] : [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+    return (
+      <div className="relative w-32 h-32 rounded-full border border-primary/20 bg-primary/5 flex items-center justify-center m-auto">
+        <div className="absolute w-1 h-1 rounded-full bg-primary z-10" />
+        {items.map((item, i) => {
+          const angle = (i * 30 - 90) * (Math.PI / 180);
+          const x = Math.cos(angle) * 50;
+          const y = Math.sin(angle) * 50;
+          const isSelected = type === 'h' ? (val % 12 === item % 12) : val === item;
+          return (
+            <button
+              key={item}
+              onClick={() => onSel(item)}
+              className={cn(
+                "absolute w-5 h-5 rounded-full text-[9px] font-black transition-all flex items-center justify-center",
+                isSelected ? "bg-primary text-primary-foreground scale-110 shadow-lg z-20" : "hover:bg-primary/20 text-muted-foreground"
+              )}
+              style={{ transform: `translate(${x}px, ${y}px)` }}
+            >
+              {item === 0 && type === 'm' ? '00' : item}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  return (
+    <div className={cn("space-y-1", className)}>
+      <Label className="text-[9px] uppercase font-black text-primary/70 ml-1">{label}</Label>
+      <div className={cn(
+        "flex items-center gap-1 p-1 bg-foreground/5 rounded-lg border border-border/50 transition-colors", 
+        error && "border-destructive ring-1 ring-destructive"
+      )}>
+        <div className="flex flex-col items-center">
+           <Button variant="ghost" size="icon" className="h-4 w-6 p-0 hover:bg-primary/20" onClick={() => adjust('h', 1)}>
+             <ChevronUp className="h-3 w-3" />
+           </Button>
+           <input
+             className="h-7 w-8 bg-transparent border-none focus:ring-0 text-center font-black text-xs text-primary p-0"
+             value={String(h).padStart(2, '0')}
+             onChange={(e) => handleType('h', e.target.value)}
+             maxLength={2}
+           />
+           <Button variant="ghost" size="icon" className="h-4 w-6 p-0 hover:bg-primary/20" onClick={() => adjust('h', -1)}>
+             <ChevronDown className="h-3 w-3" />
+           </Button>
+        </div>
+        <span className="font-black text-xs self-center -mt-1">:</span>
+        <div className="flex flex-col items-center">
+           <Button variant="ghost" size="icon" className="h-4 w-6 p-0 hover:bg-primary/20" onClick={() => adjust('m', 5)}>
+              <ChevronUp className="h-3 w-3" />
+           </Button>
+           <input
+             className="h-7 w-8 bg-transparent border-none focus:ring-0 text-center font-black text-xs text-primary p-0"
+             value={String(m).padStart(2, '0')}
+             onChange={(e) => handleType('m', e.target.value)}
+             maxLength={2}
+           />
+           <Button variant="ghost" size="icon" className="h-4 w-6 p-0 hover:bg-primary/20" onClick={() => adjust('m', -5)}>
+              <ChevronDown className="h-3 w-3" />
+           </Button>
+        </div>
+        <div className="flex flex-col gap-1 ml-1">
+           <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary"><Clock className="h-3 w-3" /></Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[180px] p-2 bg-background border-border shadow-2xl z-[150]" align="end">
+                <Tabs value={pickerMode} onValueChange={(v: any) => setPickerMode(v)} className="w-full">
+                  <TabsList className="grid grid-cols-2 h-7 bg-muted/50 mb-2">
+                    <TabsTrigger value="clock" className="text-[8px] font-black uppercase">Clock</TabsTrigger>
+                    <TabsTrigger value="shortcuts" className="text-[8px] font-black uppercase">Shortcuts</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="clock" className="space-y-3 mt-0">
+                    <div className="flex flex-col items-center gap-2">
+                      <ClockFace type="h" val={h} onSel={(v) => onChange(`${String(v).padStart(2, '0')}:${String(m).padStart(2, '0')}`)} />
+                      <div className="w-full h-px bg-border/50" />
+                      <div className="flex gap-1 flex-wrap justify-center">
+                        {[0, 15, 30, 45].map(min => (
+                          <Button 
+                            key={min} 
+                            variant="ghost" 
+                            className={cn("h-6 text-[9px] font-black px-2 bg-primary/10", m === min && "bg-primary text-primary-foreground")}
+                            onClick={() => onChange(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`)}
+                          >
+                            :{String(min).padStart(2, '0')}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="shortcuts" className="mt-0">
+                    <div className="grid grid-cols-3 gap-1">
+                      {["02:00", "04:30", "06:00", "08:15", "10:00", "12:00", "14:00", "16:00", "18:00"].map(t => (
+                        <Button 
+                          key={t} 
+                          variant="ghost" 
+                          className="h-6 text-[9px] font-bold p-1 bg-foreground/5 hover:bg-primary/20" 
+                          onClick={() => onChange(t)}
+                        >
+                          {t}
+                        </Button>
+                      ))}
+                      <Button 
+                        variant="destructive" 
+                        className="h-6 text-[9px] font-bold p-1 col-span-3 mt-1 uppercase tracking-widest" 
+                        onClick={() => onChange("00:00")}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </PopoverContent>
+           </Popover>
+        </div>
+      </div>
+      {error && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest pl-1 mt-0.5">{error}</p>}
+    </div>
+  );
+};
+
+const LiveClock = () => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (d: Date, utc = false) => {
+    const hours = utc ? d.getUTCHours() : d.getHours();
+    const minutes = utc ? d.getUTCMinutes() : d.getMinutes();
+    const seconds = utc ? d.getUTCSeconds() : d.getSeconds();
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="flex gap-4 items-center bg-black/40 backdrop-blur-xl border border-white/10 px-4 py-1.5 rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.5)] ring-1 ring-inset ring-white/5">
+      <div className="flex flex-col">
+        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-primary/40 leading-none mb-1">UTC ZULU</span>
+        <div className="flex items-baseline gap-1">
+          <span className="text-sm font-mono font-black text-primary leading-none tracking-tighter drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]">
+            {formatTime(time, true).split(':').slice(0, 2).join(':')}
+          </span>
+          <span className="text-[10px] font-mono font-black text-primary/50 leading-none">
+            {formatTime(time, true).split(':')[2]}
+          </span>
+        </div>
+      </div>
+      <div className="w-px h-6 bg-white/10 self-center" />
+      <div className="flex flex-col">
+        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-secondary/40 leading-none mb-1">LOCAL BST</span>
+        <div className="flex items-baseline gap-1">
+          <span className="text-sm font-mono font-black text-secondary leading-none tracking-tighter">
+            {formatTime(time).split(':').slice(0, 2).join(':')}
+          </span>
+          <span className="text-[10px] font-mono font-black text-secondary/50 leading-none">
+            {formatTime(time).split(':')[2]}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState('paired');
   const [input, setInput] = useState(() => localStorage.getItem('flightInput') || '');
@@ -87,6 +294,7 @@ const Index = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isReturnLegEnabled, setIsReturnLegEnabled] = useState(false);
   const [isViaCGPEnabled, setIsViaCGPEnabled] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [newFlight, setNewFlight] = useState<Partial<FlightRow & { duration: number }>>({
     flightNo: '',
     from: 'DAC',
@@ -147,6 +355,14 @@ const Index = () => {
   const updateNewFlightField = (field: keyof (FlightRow & { duration: number }), value: string | number) => {
     const updated = { ...newFlight, [field]: value };
     
+    // Clear error for this field
+    if (formErrors[field]) {
+      setFormErrors(prev => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
     if (field === 'from' || field === 'to') {
       const dur = getSectorDuration(updated.from || '', updated.to || '');
       if (dur) {
@@ -199,6 +415,19 @@ const Index = () => {
   const updateReturnFlightField = (field: keyof (FlightRow & { duration: number }), value: string | number) => {
     const updated = { ...returnFlight, [field]: value };
     
+    // Clear error for this field
+    const errorKey = field === 'flightNo' ? 'retFlightNo' : 
+                     field === 'std' ? 'retStd' : 
+                     field === 'duration' ? 'retDuration' : 
+                     field === 'pax' ? 'retPax' : null;
+    
+    if (errorKey && formErrors[errorKey]) {
+      setFormErrors(prev => {
+        const next = { ...prev };
+        delete next[errorKey];
+        return next;
+      });
+    }
     if (field === 'std' || field === 'duration') {
       if (updated.std && updated.duration !== undefined) {
         updated.eta = calculateETAFromDuration(updated.std, updated.duration);
@@ -209,8 +438,54 @@ const Index = () => {
   };
 
   const handleManualAdd = () => {
-    if (!newFlight.flightNo || !newFlight.from || !newFlight.to) {
-      toast.error('Flight No and Vector are required');
+    // Validation
+    const errors: Record<string, string> = {};
+    const timeRegex = /^([01]\d|2[0-3]):?([0-5]\d)$/;
+    
+    // Main Leg Validation
+    if (!newFlight.flightNo) {
+      errors.flightNo = 'BS number required';
+    } else if (!/^\d+$/.test(String(newFlight.flightNo))) {
+      errors.flightNo = 'Must be numbers only';
+    }
+
+    if (!newFlight.from) errors.from = 'Required';
+    if (!newFlight.to) errors.to = 'Required';
+    
+    if (!newFlight.std || newFlight.std === '00:00') {
+      errors.std = 'Field required';
+    } else if (!timeRegex.test(newFlight.std)) {
+      errors.std = 'Invalid HH:MM';
+    }
+
+    if (!newFlight.aircraft || newFlight.aircraft === '-') errors.aircraft = 'Required';
+    if (!newFlight.reg) errors.reg = 'Required';
+    
+    if (!newFlight.duration || newFlight.duration <= 0) errors.duration = 'Required';
+    if (newFlight.pax !== undefined && Number(newFlight.pax) < 0) errors.pax = 'Invalid';
+
+    // Return Leg Validation
+    if (isReturnLegEnabled) {
+      if (!returnFlight.flightNo) {
+        errors.retFlightNo = 'BS number required';
+      } else if (!/^\d+$/.test(String(returnFlight.flightNo))) {
+        errors.retFlightNo = 'Must be numbers only';
+      }
+
+      if (!returnFlight.std || returnFlight.std === '00:00') {
+        errors.retStd = 'Field required';
+      } else if (!timeRegex.test(returnFlight.std || '')) {
+        errors.retStd = 'Invalid HH:MM';
+      }
+
+      if (!returnFlight.duration || returnFlight.duration <= 0) errors.retDuration = 'Required';
+      if (returnFlight.pax !== undefined && Number(returnFlight.pax) < 0) errors.retPax = 'Invalid';
+    }
+
+    setFormErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      toast.error('Check form fields');
       return;
     }
 
@@ -223,7 +498,7 @@ const Index = () => {
       const sector1Eta = calculateETAFromDuration(newFlight.std || '00:00', sector1Dur);
       
       const outboundSector1: FlightRow = {
-        flightNo: `BS${newFlight.flightNo}`,
+        flightNo: `BS ${newFlight.flightNo}`,
         from: newFlight.from || '',
         to: 'CGP',
         std: newFlight.std || '',
@@ -243,7 +518,7 @@ const Index = () => {
       const sector2Eta = calculateETAFromDuration(sector2Std, sector2Dur);
 
       const outboundSector2: FlightRow = {
-        flightNo: `BS${newFlight.flightNo}`,
+        flightNo: `BS ${newFlight.flightNo}`,
         from: 'CGP',
         to: newFlight.to || '',
         std: sector2Std,
@@ -262,7 +537,7 @@ const Index = () => {
         const retSector1Eta = calculateETAFromDuration(returnFlight.std || '00:00', retSector1Dur);
 
         const returnSector1: FlightRow = {
-          flightNo: `BS${returnFlight.flightNo}`,
+          flightNo: `BS ${returnFlight.flightNo}`,
           from: newFlight.to || '',
           to: 'CGP',
           std: returnFlight.std || '',
@@ -280,7 +555,7 @@ const Index = () => {
         const retSector2Eta = calculateETAFromDuration(retSector2Std, retSector2Dur);
 
         const returnSector2: FlightRow = {
-          flightNo: `BS${returnFlight.flightNo}`,
+          flightNo: `BS ${returnFlight.flightNo}`,
           from: 'CGP',
           to: newFlight.from || '',
           std: retSector2Std,
@@ -295,7 +570,7 @@ const Index = () => {
     } else {
       // Standard Direct Flight
       const flightToAdd: FlightRow = {
-        flightNo: `BS${newFlight.flightNo}`,
+        flightNo: `BS ${newFlight.flightNo}`,
         from: newFlight.from || '',
         to: newFlight.to || '',
         std: newFlight.std || '',
@@ -309,7 +584,7 @@ const Index = () => {
 
       if (isReturnLegEnabled) {
         const retFlightToAdd: FlightRow = {
-          flightNo: `BS${returnFlight.flightNo}`,
+          flightNo: `BS ${returnFlight.flightNo}`,
           from: newFlight.to || '',
           to: newFlight.from || '',
           std: returnFlight.std || '',
@@ -353,6 +628,12 @@ const Index = () => {
       pax: 0
     });
   };
+
+  useEffect(() => {
+    if (isManualEntryOpen) {
+      setFormErrors({});
+    }
+  }, [isManualEntryOpen]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -645,6 +926,9 @@ const Index = () => {
             <h2 className="text-sm font-black uppercase tracking-[0.25em] text-primary truncate">
               {activeTab === 'paired' ? 'MORNING LOAD' : activeTab === 'table' ? 'Operations' : activeTab === 'charts' ? 'Analytics' : activeTab === 'map' ? 'Network Map' : 'Config'}
             </h2>
+            <div className="hidden md:block">
+              <LiveClock />
+            </div>
             <div className="hidden sm:block h-3 w-px bg-border" />
             <div className="hidden sm:flex items-center gap-2 text-[10px] uppercase font-bold text-muted-foreground tracking-wider shrink-0">
               <CalendarIcon className="w-3 h-3 text-muted-foreground/60" />
@@ -891,165 +1175,220 @@ const Index = () => {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="aircraft" className="text-right text-[10px] font-black uppercase tracking-widest">Aircraft</Label>
+                <div className="col-span-3 space-y-1">
+                  <Select 
+                    value={newFlight.aircraft} 
+                    onValueChange={val => updateNewFlightField('aircraft', val)}
+                  >
+                    <SelectTrigger id="aircraft" className={cn("h-8 text-xs bg-background/50 border-border", formErrors.aircraft && "border-destructive ring-1 ring-destructive")}>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[110]">
+                      <SelectItem value="ATR 72-600">ATR 72-600</SelectItem>
+                      <SelectItem value="Boeing 737-800">Boeing 737-800</SelectItem>
+                      <SelectItem value="Airbus A330">Airbus A330</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formErrors.aircraft && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest">{formErrors.aircraft}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="flightNo" className="text-right text-[10px] font-black uppercase tracking-widest">Flight No</Label>
-                <div className="col-span-3 flex items-center">
-                  <span className="bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-primary">BS</span>
-                  <Input 
-                    id="flightNo" 
-                    value={newFlight.flightNo} 
-                    onChange={e => updateNewFlightField('flightNo', e.target.value.toUpperCase())}
-                    className="h-8 text-xs bg-background/50 border-border rounded-l-none" 
-                    placeholder="101"
-                  />
+                <div className="col-span-3 space-y-1">
+                  <div className="flex items-center">
+                    <span className={cn("bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-primary", formErrors.flightNo && "border-destructive")}>BS</span>
+                    <Input 
+                      id="flightNo" 
+                      value={newFlight.flightNo} 
+                      onChange={e => updateNewFlightField('flightNo', e.target.value.toUpperCase())}
+                      className={cn("h-8 text-xs bg-background/50 border-border rounded-l-none", formErrors.flightNo && "border-destructive ring-1 ring-destructive")}
+                      placeholder="101"
+                    />
+                  </div>
+                  {formErrors.flightNo && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest">{formErrors.flightNo}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-12 items-center gap-4">
                 <Label className="col-span-3 text-right text-[10px] font-black uppercase tracking-widest">Vector</Label>
-                <div className="col-span-9 flex items-center gap-2">
-                  <Popover open={originComboboxOpen} onOpenChange={setOriginComboboxOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={originComboboxOpen}
-                        className="flex-1 h-8 text-xs bg-background/50 border-border justify-between font-bold"
-                      >
-                        <span className="font-black">{newFlight.from}</span>
-                        <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[120px] p-0 z-[110]" align="start">
-                      <Command className="bg-background border-none">
-                        <CommandInput placeholder="..." className="h-8 text-xs" />
-                        <CommandList className="max-h-[200px]">
-                          <CommandGroup>
-                            {origins.map((code) => (
-                              <CommandItem
-                                key={code}
-                                value={code}
-                                onSelect={() => {
-                                  updateNewFlightField('from', code);
-                                  setOriginComboboxOpen(false);
-                                }}
-                                className="text-[10px] font-bold py-2"
-                              >
-                                {code}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  <span className="text-muted-foreground text-xs font-bold">/</span>
-                  <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={comboboxOpen}
-                        className="flex-1 h-8 text-xs bg-background/50 border-border justify-between font-bold"
-                      >
-                        {newFlight.to ? (
-                          <div className="flex items-center gap-2">
-                            <span className="font-black">{newFlight.to}</span>
-                            <span className="text-[9px] text-muted-foreground hidden sm:inline">{getSectorName(newFlight.from || 'DAC', newFlight.to)}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">DEST</span>
-                        )}
-                        <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[240px] p-0 z-[110]" align="start">
-                      <Command className="bg-background border-none">
-                        <CommandInput placeholder="Search destination..." className="h-8 text-xs" />
-                        <CommandList className="max-h-[300px]">
-                          <CommandEmpty className="text-[10px] py-2 px-3">No destination found.</CommandEmpty>
-                          <CommandGroup>
-                            {destinations.map((dest) => (
-                              <CommandItem
-                                key={dest.code}
-                                value={`${dest.code} ${dest.name}`}
-                                onSelect={() => {
-                                  updateNewFlightField('to', dest.code);
-                                  setComboboxOpen(false);
-                                }}
-                                className="text-[10px] font-bold py-2"
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-3 w-3",
-                                    newFlight.to === dest.code ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex flex-col flex-1">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-black text-xs leading-none">{dest.code}</span>
-                                    <span className="text-[10px] font-mono font-black text-primary/70">{dest.duration}m</span>
+                <div className="col-span-9 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Popover open={originComboboxOpen} onOpenChange={setOriginComboboxOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={originComboboxOpen}
+                          className={cn("flex-1 h-8 text-xs bg-background/50 border-border justify-between font-bold", formErrors.from && "border-destructive")}
+                        >
+                          <span className="font-black">{newFlight.from}</span>
+                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[120px] p-0 z-[110]" align="start">
+                        <Command className="bg-background border-none">
+                          <CommandInput placeholder="..." className="h-8 text-xs" />
+                          <CommandList className="max-h-[200px]">
+                            <CommandGroup>
+                              {origins.map((code) => (
+                                <CommandItem
+                                  key={code}
+                                  value={code}
+                                  onSelect={() => {
+                                    updateNewFlightField('from', code);
+                                    setOriginComboboxOpen(false);
+                                  }}
+                                  className="text-[10px] font-bold py-2"
+                                >
+                                  {code}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <span className="text-muted-foreground text-xs font-bold">/</span>
+                    <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={comboboxOpen}
+                          className={cn("flex-1 h-8 text-xs bg-background/50 border-border justify-between font-bold", formErrors.to && "border-destructive")}
+                        >
+                          {newFlight.to ? (
+                            <div className="flex items-center gap-2">
+                              <span className="font-black">{newFlight.to}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">DEST</span>
+                          )}
+                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[240px] p-0 z-[110]" align="start">
+                        <Command className="bg-background border-none">
+                          <CommandInput placeholder="Search destination..." className="h-8 text-xs" />
+                          <CommandList className="max-h-[300px]">
+                            <CommandEmpty className="text-[10px] py-2 px-3">No destination found.</CommandEmpty>
+                            <CommandGroup>
+                              {destinations.map((dest) => (
+                                <CommandItem
+                                  key={dest.code}
+                                  value={`${dest.code} ${dest.name}`}
+                                  onSelect={() => {
+                                    updateNewFlightField('to', dest.code);
+                                    setComboboxOpen(false);
+                                  }}
+                                  className="text-[10px] font-bold py-2"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-3 w-3",
+                                      newFlight.to === dest.code ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col flex-1">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-black text-xs leading-none">{dest.code}</span>
+                                      <span className="text-[10px] font-mono font-black text-primary/70">{dest.duration}m</span>
+                                    </div>
+                                    <span className="text-[8px] text-muted-foreground uppercase leading-tight mt-0.5 truncate">
+                                      {dest.name}
+                                    </span>
                                   </div>
-                                  <span className="text-[8px] text-muted-foreground uppercase leading-tight mt-0.5 truncate">
-                                    {dest.name}
-                                  </span>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  {(formErrors.from || formErrors.to) && (
+                    <p className="text-[9px] font-bold text-destructive uppercase tracking-widest">{formErrors.from || formErrors.to}</p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right text-[10px] font-black uppercase tracking-widest">Telemetry</Label>
-                <div className="col-span-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Departure</Label>
-                      <Input 
-                        value={newFlight.std} 
-                        onChange={e => updateNewFlightField('std', e.target.value)}
-                        className="h-8 text-xs bg-background/50 border-border text-center px-1" 
-                        placeholder="STD"
-                        type="time"
-                      />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Block Time</Label>
-                      <Input 
-                        value={newFlight.duration || ''} 
-                        onChange={e => updateNewFlightField('duration', Number(e.target.value))}
-                        className="h-8 text-xs bg-background/50 border-border text-center px-1" 
-                        placeholder="MIN"
-                        type="number"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Arrival (Auto)</Label>
-                    <Input 
-                      value={newFlight.eta} 
-                      onChange={e => updateNewFlightField('eta', e.target.value)}
-                      className="h-8 text-xs bg-background/50 border-border text-center px-1" 
-                      placeholder="ETA"
-                      type="time"
+                <div className="col-span-3 space-y-3">
+                  <div className="flex items-start gap-4">
+                    <NiceTimeInput 
+                      label="Departure (STD)" 
+                      value={newFlight.std || "00:00"} 
+                      onChange={val => updateNewFlightField('std', val)}
+                      className="flex-1"
+                      error={formErrors.std}
                     />
+                    
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-[9px] uppercase font-black text-primary/70 ml-1">Block Time (Min)</Label>
+                      <div className={cn(
+                        "flex flex-col gap-1.5 p-1 bg-foreground/5 rounded-lg border border-border/50",
+                        formErrors.duration && "border-destructive ring-1 ring-destructive"
+                      )}>
+                        <Input 
+                          value={newFlight.duration || ''} 
+                          onChange={e => updateNewFlightField('duration', Number(e.target.value))}
+                          className="h-7 text-xs bg-transparent border-none text-center px-1 font-black text-primary focus-visible:ring-0" 
+                          placeholder="0"
+                          type="number"
+                          min="0"
+                        />
+                        <div className="flex gap-1">
+                          {[10, 60].map(val => (
+                            <Button 
+                              key={val}
+                              variant="ghost" 
+                              className="h-5 flex-1 text-[8px] font-black p-0 hover:bg-primary/20 bg-primary/5"
+                              onClick={() => {
+                                const current = Number(newFlight.duration) || 0;
+                                updateNewFlightField('duration', current + val);
+                              }}
+                            >
+                              +{val}
+                            </Button>
+                          ))}
+                          <Button 
+                            variant="ghost" 
+                            className="h-5 flex-1 text-[8px] font-black p-0 hover:bg-destructive/20 bg-destructive/5 text-destructive"
+                            onClick={() => updateNewFlightField('duration', 0)}
+                          >
+                            CLR
+                          </Button>
+                        </div>
+                      </div>
+                      {formErrors.duration && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest pl-1">{formErrors.duration}</p>}
+                    </div>
                   </div>
+                  <NiceTimeInput 
+                    label="Arrival (ETA - Computed)" 
+                    value={newFlight.eta || "00:00"} 
+                    onChange={val => updateNewFlightField('eta', val)}
+                    className="w-full"
+                    error={formErrors.eta}
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="pax" className="text-right text-[10px] font-black uppercase tracking-widest">Payload</Label>
-                <Input 
-                  id="pax" 
-                  type="number"
-                  value={newFlight.pax} 
-                  onChange={e => updateNewFlightField('pax', Number(e.target.value))}
-                  className="col-span-3 h-8 text-xs bg-background/50 border-border" 
-                />
+                <div className="col-span-3 space-y-1">
+                  <Input 
+                    id="pax" 
+                    type="number"
+                    min="0"
+                    value={newFlight.pax} 
+                    onChange={e => updateNewFlightField('pax', Number(e.target.value))}
+                    className={cn("h-8 text-xs bg-background/50 border-border", formErrors.pax && "border-destructive ring-1 ring-destructive")} 
+                  />
+                  {formErrors.pax && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest leading-none">{formErrors.pax}</p>}
+                </div>
               </div>
             </div>
 
@@ -1119,15 +1458,18 @@ const Index = () => {
 
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="ret-flightNo" className="text-right text-[10px] font-black uppercase tracking-widest">Flight No</Label>
-                    <div className="col-span-3 flex items-center">
-                      <span className="bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-secondary">BS</span>
-                      <Input 
-                        id="ret-flightNo" 
-                        value={returnFlight.flightNo} 
-                        onChange={e => updateReturnFlightField('flightNo', e.target.value.toUpperCase())}
-                        className="h-8 text-xs bg-background/50 border-border rounded-l-none" 
-                        placeholder="102"
-                      />
+                    <div className="col-span-3 space-y-1">
+                      <div className="flex items-center">
+                        <span className={cn("bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-secondary", formErrors.retFlightNo && "border-destructive")}>BS</span>
+                        <Input 
+                          id="ret-flightNo" 
+                          value={returnFlight.flightNo} 
+                          onChange={e => updateReturnFlightField('flightNo', e.target.value.toUpperCase())}
+                          className={cn("h-8 text-xs bg-background/50 border-border rounded-l-none", formErrors.retFlightNo && "border-destructive ring-1 ring-destructive")} 
+                          placeholder="102"
+                        />
+                      </div>
+                      {formErrors.retFlightNo && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest">{formErrors.retFlightNo}</p>}
                     </div>
                   </div>
 
@@ -1146,51 +1488,80 @@ const Index = () => {
 
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label className="text-right text-[10px] font-black uppercase tracking-widest">Telemetry</Label>
-                    <div className="col-span-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 space-y-1">
-                          <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">DEP FROM {newFlight.to || 'DEST'}</Label>
-                          <Input 
-                            value={returnFlight.std} 
-                            onChange={e => updateReturnFlightField('std', e.target.value)}
-                            className="h-8 text-xs bg-background/50 border-border text-center px-1 font-bold" 
-                            placeholder="STD"
-                            type="time"
+                    <div className="col-span-3 space-y-3">
+                      <div className="flex items-start gap-4">
+                          <NiceTimeInput 
+                            label={`DEP FROM ${newFlight.to || 'DEST'}`} 
+                            value={returnFlight.std || "00:00"} 
+                            onChange={val => updateReturnFlightField('std', val)}
+                            className="flex-1"
+                            error={formErrors.retStd}
                           />
+                          
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-[9px] uppercase font-black text-secondary/70 ml-1">Block Time (Min)</Label>
+                            <div className={cn(
+                              "flex flex-col gap-1.5 p-1 bg-foreground/5 rounded-lg border border-border/50",
+                              formErrors.retDuration && "border-destructive ring-1 ring-destructive"
+                            )}>
+                              <Input 
+                                value={returnFlight.duration || ''} 
+                                onChange={e => updateReturnFlightField('duration', Number(e.target.value))}
+                                className="h-7 text-xs bg-transparent border-none text-center px-1 font-black text-secondary focus-visible:ring-0" 
+                                placeholder="0"
+                                type="number"
+                                min="0"
+                              />
+                              <div className="flex gap-1">
+                                {[10, 60].map(val => (
+                                  <Button 
+                                    key={val}
+                                    variant="ghost" 
+                                    className="h-5 flex-1 text-[8px] font-black p-0 hover:bg-secondary/20 bg-secondary/5"
+                                    onClick={() => {
+                                      const current = Number(returnFlight.duration) || 0;
+                                      updateReturnFlightField('duration', current + val);
+                                    }}
+                                  >
+                                    +{val}
+                                  </Button>
+                                ))}
+                                <Button 
+                                  variant="ghost" 
+                                  className="h-5 flex-1 text-[8px] font-black p-0 hover:bg-destructive/20 bg-destructive/5 text-destructive"
+                                  onClick={() => updateReturnFlightField('duration', 0)}
+                                >
+                                  CLR
+                                </Button>
+                              </div>
+                            </div>
+                            {formErrors.retDuration && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest pl-1">{formErrors.retDuration}</p>}
+                          </div>
                         </div>
-                        <div className="flex-1 space-y-1">
-                          <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">Block Time</Label>
-                          <Input 
-                            value={returnFlight.duration || ''} 
-                            onChange={e => updateReturnFlightField('duration', Number(e.target.value))}
-                            className="h-8 text-xs bg-background/50 border-border text-center px-1 font-bold" 
-                            placeholder="MIN"
-                            type="number"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[9px] uppercase font-bold text-muted-foreground ml-1">ARR AT DAC (Auto)</Label>
-                        <Input 
-                          value={returnFlight.eta} 
-                          onChange={e => updateReturnFlightField('eta', e.target.value)}
-                          className="h-8 text-xs bg-background/50 border-border text-center px-1 font-bold" 
-                          placeholder="ETA"
-                          type="time"
+  
+                        <NiceTimeInput 
+                          label="ARR AT DAC (Computed)" 
+                          value={returnFlight.eta || "00:00"} 
+                          onChange={val => updateReturnFlightField('eta', val)}
+                          className="w-full"
+                          error={formErrors.retEta}
                         />
-                      </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="ret-pax" className="text-right text-[10px] font-black uppercase tracking-widest">Payload</Label>
-                    <Input 
-                      id="ret-pax" 
-                      type="number"
-                      value={returnFlight.pax} 
-                      onChange={e => updateReturnFlightField('pax', Number(e.target.value))}
-                      className="col-span-3 h-8 text-xs bg-background/50 border-border" 
-                    />
+                    <div className="col-span-3 space-y-1">
+                      <Input 
+                        id="ret-pax" 
+                        type="number"
+                        min="0"
+                        value={returnFlight.pax} 
+                        onChange={e => updateReturnFlightField('pax', Number(e.target.value))}
+                        className={cn("h-8 text-xs bg-background/50 border-border", formErrors.retPax && "border-destructive ring-1 ring-destructive")} 
+                      />
+                      {formErrors.retPax && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest leading-none">{formErrors.retPax}</p>}
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -1200,16 +1571,19 @@ const Index = () => {
             <div className="pt-2 border-t border-border mt-2">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="reg" className="text-right text-[10px] font-black uppercase tracking-widest">Registry</Label>
-                <div className="col-span-3 flex items-center">
-                  <span className="bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-muted-foreground">S2-</span>
-                  <Input 
-                    id="reg" 
-                    value={newFlight.reg} 
-                    maxLength={3}
-                    onChange={e => updateNewFlightField('reg', e.target.value.toUpperCase())}
-                    className="h-8 text-xs bg-background/50 border-border rounded-l-none" 
-                    placeholder="AFF"
-                  />
+                <div className="col-span-3 space-y-1">
+                  <div className="flex items-center">
+                    <span className={cn("bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-muted-foreground", formErrors.reg && "border-destructive")}>S2-</span>
+                    <Input 
+                      id="reg" 
+                      value={newFlight.reg} 
+                      maxLength={3}
+                      onChange={e => updateNewFlightField('reg', e.target.value.toUpperCase())}
+                      className={cn("h-8 text-xs bg-background/50 border-border rounded-l-none", formErrors.reg && "border-destructive ring-1 ring-destructive")}
+                      placeholder="AFF"
+                    />
+                  </div>
+                  {formErrors.reg && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest">{formErrors.reg}</p>}
                 </div>
               </div>
             </div>
