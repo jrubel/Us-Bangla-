@@ -65,6 +65,11 @@ export function getAvailableDestinations(from: string = 'DAC'): SectorInfo[] {
   const sectors = new Set<string>();
   const origin = from.toUpperCase();
   
+  // Add default sectors
+  Object.keys(SECTOR_DURATIONS).forEach(key => {
+    sectors.add(key.toUpperCase());
+  });
+
   try {
     const savedOverrides = localStorage.getItem('sectorDurationOverrides');
     if (savedOverrides) {

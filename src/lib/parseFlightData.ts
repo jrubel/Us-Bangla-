@@ -47,9 +47,17 @@ export function parseFlightData(text: string): FlightRow[] {
     const flightNo = formatFlightNo(airlineCode, flightNum);
 
     // From
-    const from = (tokens[idx++] || '').toUpperCase();
-    // To
-    const to = (tokens[idx++] || '').toUpperCase();
+    const airport1 = (tokens[idx++] || '').toUpperCase();
+    // To (could be middle or final)
+    const airport2 = (tokens[idx++] || '').toUpperCase();
+    
+    // Check if there is a third airport token before the time/date
+    let airport3 = '';
+    // Airport codes are usually 3 letters. Times are usually 4 or 5 (HH:MM or HHMM)
+    if (idx < tokens.length && tokens[idx].length === 3 && /^[A-Z]{3}$/.test(tokens[idx].toUpperCase()) &&
+        !/^\d{1,2}[A-Z]{3}$/i.test(tokens[idx])) { // Not a date like 11APR
+      airport3 = tokens[idx++].toUpperCase();
+    }
 
     // Skip date field like 11APR, 12MAY etc.
     if (idx < tokens.length && /^\d{1,2}[A-Za-z]{3}$/i.test(tokens[idx])) {
@@ -70,10 +78,6 @@ export function parseFlightData(text: string): FlightRow[] {
     }
     const rawEta = cleanTime(etaRaw);
 
-    // Calculate ETA from sector duration, fallback to raw
-    const calculatedEta = calculateETA(std, from, to);
-    const eta = calculatedEta || rawEta;
-
     // Aircraft type
     const aircraft = tokens[idx++] || '';
 
@@ -89,7 +93,32 @@ export function parseFlightData(text: string): FlightRow[] {
       if (!isNaN(n)) { pax = n; break; }
     }
 
-    rows.push({ sn: sn++, flightNo, from, to, std, eta, aircraft, reg, pax });
+    if (airport3) {
+      // Split into two rows: airport1 -> airport2 and airport2 -> airport3
+      // First sector: airport1 -> airport2
+      const sector1Eta = calculateETA(std, airport1, airport2) || rawEta;
+      rows.push({ sn: sn++, flightNo, from: airport1, to: airport2, std, eta: sector1Eta, aircraft, reg, pax: Math.floor(pax * 0.4) || 0 });
+      
+      // Second sector: airport2 -> airport3
+      // Assume 60 min ground time if it's a via flight
+      const sector2Std = calculateETA(sector1Eta, '00:00', '00:60') || sector1Eta; // Hacky way to add 60 mins if I don't have a better util here, but wait
+      // Actually let's just use rawEta for the final destination if available
+      const sector2Eta = calculateETA(sector1Eta, airport2, airport3) || rawEta;
+      
+      // For second sector STD, let's try to add 60 mins to sector1's ETA
+      const [h, m] = sector1Eta.split(':').map(Number);
+      const totalMins = (h * 60 + (m || 0) + 60) % 1440;
+      const s2h = Math.floor(totalMins / 60);
+      const s2m = totalMins % 60;
+      const s2std = `${String(s2h).padStart(2, '0')}:${String(s2m).padStart(2, '0')}`;
+      
+      rows.push({ sn: sn++, flightNo, from: airport2, to: airport3, std: s2std, eta: sector2Eta, aircraft, reg, pax });
+    } else {
+      // Standard sector
+      const calculatedEta = calculateETA(std, airport1, airport2);
+      const eta = calculatedEta || rawEta;
+      rows.push({ sn: sn++, flightNo, from: airport1, to: airport2, std, eta, aircraft, reg, pax });
+    }
   }
 
   return rows;

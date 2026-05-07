@@ -155,6 +155,7 @@ interface PairedRowMetadata {
   isFirstInPair: boolean;
   pairLength: number;
   sn: number | null;
+  pairIndex: number;
 }
 
 const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight, onDelete, isEditMode, dateLabel, onAddFlight }: Props) => {
@@ -172,6 +173,7 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
           isFirstInPair: ri === 0,
           pairLength: pair.length,
           sn: ri === 0 ? pi + 1 : null,
+          pairIndex: pi,
         });
       });
     });
@@ -303,9 +305,9 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
 
       <div ref={containerRef} className="space-y-6 p-1">
         {dateLabel && (
-          <div className="text-center py-4 bg-foreground/5 border border-border rounded-2xl glass-card relative overflow-hidden group">
+          <div className="text-center py-6 bg-foreground/5 border-2 border-border rounded-2xl glass-card relative overflow-hidden group mb-4">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5 opacity-50"></div>
-            <div className="relative text-xs font-black uppercase tracking-[0.4em] text-foreground/80">
+            <div className="relative text-2xl font-black uppercase tracking-[0.4em] text-foreground transition-all duration-300 group-hover:tracking-[0.5em]">
               {dateLabel}
             </div>
           </div>
@@ -318,22 +320,31 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
             {/* Domestic Table - Left Side */}
             <div className="flex flex-col gap-4">
             <div className="glass-card rounded-2xl border-2 border-border overflow-hidden flex flex-col group h-full">
-              <div className="bg-primary/10 border-b-2 border-border text-foreground text-center py-4 text-xs font-black uppercase tracking-[0.3em]">
+              <div className="bg-primary/10 border-b-2 border-border text-foreground text-center py-4 text-sm font-black uppercase tracking-[0.3em]">
                 Domestic
               </div>
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-sm border-collapse min-w-[500px]">
                   <thead>
                     <tr className="bg-foreground/5 text-foreground/60 border-b-2 border-border">
-                      {headers.map(h => <th key={`d-h-${h}`} className="px-3 py-4 border-r-2 border-border text-center text-xs font-black uppercase tracking-wider">{h}</th>)}
+                      {headers.map(h => <th key={`d-h-${h}`} className="px-3 py-4 border-r-2 border-border text-center text-sm font-black uppercase tracking-wider">{h}</th>)}
                       {onDelete && <th className="px-1 py-1 border-border text-center text-[8px] font-black uppercase tracking-widest w-8"></th>}
                     </tr>
                   </thead>
                   <tbody className="font-mono text-foreground/80">
                     {domesticRows.map((d, i) => (
-                      <tr key={`d-row-${i}`} className="border-b-2 border-border last:border-0 hover:bg-foreground/5 transition-colors group/row">
+                      <tr 
+                        key={`d-row-${i}`} 
+                        className={cn(
+                          "border-b-2 border-border last:border-0 hover:bg-foreground/5 transition-colors group/row",
+                          d.pairIndex % 2 === 0 ? "bg-sky-50/50" : "bg-background"
+                        )}
+                      >
                         {d.isFirstInPair && (
-                          <td rowSpan={d.pairLength} className="px-3 py-4 font-black text-center w-10 border-r-2 border-border bg-foreground/5 text-xs text-primary transition-colors group-hover/row:text-foreground">
+                          <td rowSpan={d.pairLength} className={cn(
+                            "px-3 py-4 font-black text-center w-10 border-r-2 border-border text-sm text-primary transition-colors group-hover/row:text-foreground",
+                            d.pairIndex % 2 === 0 ? "bg-sky-100/50" : "bg-foreground/5"
+                          )}>
                             {d.sn}
                           </td>
                         )}
@@ -344,22 +355,22 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                                 type="text"
                                 value={d.row.reg}
                                 onChange={(e) => onUpdateReg(d.row!.flightNo, 0, e.target.value.toUpperCase())}
-                                className="w-16 bg-background/60 border-2 border-border focus:outline-none focus:border-primary rounded-md text-center text-sm py-1.5 text-foreground font-black"
+                                className="w-16 bg-background/60 border-2 border-border focus:outline-none focus:border-primary rounded-md text-center text-lg py-1.5 text-foreground font-black"
                               />
                             ) : (
-                              <div className="text-center text-sm font-black text-foreground">{d.row?.reg || ''}</div>
+                              <div className="text-center text-lg font-black text-foreground">{d.row?.reg || ''}</div>
                             )}
                           </td>
                         )}
-                        <td className="px-3 py-4 font-black text-center text-sm border-r-2 border-border text-foreground">{d.row?.flightNo || ''}</td>
+                        <td className="px-3 py-4 font-black text-center text-base border-r-2 border-border text-foreground">{d.row?.flightNo || ''}</td>
                         <td className="px-3 py-4 whitespace-nowrap text-center border-r-2 border-border uppercase">
                           {d.row ? (
                             <div className="flex flex-col">
-                              <span className="text-sm font-black text-foreground">{d.row.from}-{d.row.to}</span>
+                              <span className="text-base font-black text-foreground">{d.row.from}-{d.row.to}</span>
                             </div>
                           ) : ''}
                         </td>
-                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r-2 border-border">
+                        <td className="px-3 py-4 text-center text-base text-foreground font-black border-r-2 border-border">
                           {isEditMode && d.row ? (
                             <input
                               type="text"
@@ -371,7 +382,7 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                             d.row?.std || ''
                           )}
                         </td>
-                        <td className="px-3 py-4 text-center text-base font-black border-r-2 border-border text-foreground">
+                        <td className="px-3 py-4 text-center text-lg font-black border-r-2 border-border text-foreground">
                           {isEditMode && d.row ? (
                             <input
                               type="text"
@@ -384,7 +395,7 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                           )}
                         </td>
                         <td className={cn(
-                          "px-3 py-4 font-black text-center text-base border-r-2 border-border",
+                          "px-3 py-4 font-black text-center text-lg border-r-2 border-border",
                           d.row && d.row.pax < 60 ? 'text-shadow-neon text-rose-500' : 'text-foreground/80'
                         )}>
                           {isEditMode && d.row ? (
@@ -424,22 +435,31 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
           {/* International Table - Right Side */}
           <div className="flex flex-col gap-4">
             <div className="glass-card rounded-2xl border-2 border-border overflow-hidden flex flex-col group h-full">
-              <div className="bg-secondary/10 border-b-2 border-border text-foreground text-center py-4 text-xs font-black uppercase tracking-[0.3em]">
+              <div className="bg-secondary/10 border-b-2 border-border text-foreground text-center py-4 text-sm font-black uppercase tracking-[0.3em]">
                 International
               </div>
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-sm border-collapse min-w-[500px]">
                   <thead>
                     <tr className="bg-foreground/5 text-foreground/60 border-b-2 border-border">
-                      {headers.map(h => <th key={`i-h-${h}`} className="px-3 py-4 border-r-2 border-border text-center text-xs font-black uppercase tracking-wider">{h}</th>)}
+                      {headers.map(h => <th key={`i-h-${h}`} className="px-3 py-4 border-r-2 border-border text-center text-sm font-black uppercase tracking-wider">{h}</th>)}
                       {onDelete && <th className="px-1 py-1 border-border text-center text-[8px] font-black uppercase tracking-widest w-8"></th>}
                     </tr>
                   </thead>
                   <tbody className="font-mono text-foreground/80">
                     {intlRows.map((intl, i) => (
-                      <tr key={`i-row-${i}`} className="border-b-2 border-border last:border-0 hover:bg-foreground/5 transition-colors group/row">
+                      <tr 
+                        key={`i-row-${i}`} 
+                        className={cn(
+                          "border-b-2 border-border last:border-0 hover:bg-foreground/5 transition-colors group/row",
+                          intl.pairIndex % 2 === 0 ? "bg-emerald-50/50" : "bg-background"
+                        )}
+                      >
                         {intl.isFirstInPair && (
-                          <td rowSpan={intl.pairLength} className="px-3 py-4 font-black text-center w-10 border-r-2 border-border bg-foreground/5 text-xs text-secondary transition-colors group-hover/row:text-foreground">
+                          <td rowSpan={intl.pairLength} className={cn(
+                            "px-3 py-4 font-black text-center w-10 border-r-2 border-border text-sm text-secondary transition-colors group-hover/row:text-foreground",
+                            intl.pairIndex % 2 === 0 ? "bg-emerald-100/50" : "bg-foreground/5"
+                          )}>
                             {intl.sn}
                           </td>
                         )}
@@ -450,22 +470,22 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                                 type="text"
                                 value={intl.row.reg}
                                 onChange={(e) => onUpdateReg(intl.row!.flightNo, 0, e.target.value.toUpperCase())}
-                                className="w-16 bg-background/60 border-2 border-border focus:outline-none focus:border-secondary rounded-md text-center text-sm py-1.5 text-foreground font-black"
+                                className="w-16 bg-background/60 border-2 border-border focus:outline-none focus:border-secondary rounded-md text-center text-lg py-1.5 text-foreground font-black"
                               />
                             ) : (
-                              <div className="text-center text-sm font-black text-foreground">{intl.row?.reg || ''}</div>
+                              <div className="text-center text-lg font-black text-foreground">{intl.row?.reg || ''}</div>
                             )}
                           </td>
                         )}
-                        <td className="px-3 py-4 font-black text-center text-sm border-r-2 border-border text-foreground">{intl.row?.flightNo || ''}</td>
+                        <td className="px-3 py-4 font-black text-center text-base border-r-2 border-border text-foreground">{intl.row?.flightNo || ''}</td>
                         <td className="px-3 py-4 whitespace-nowrap text-center border-r-2 border-border uppercase">
                           {intl.row ? (
                             <div className="flex flex-col">
-                              <span className="text-sm font-black text-foreground">{intl.row.from}-{intl.row.to}</span>
+                              <span className="text-base font-black text-foreground">{intl.row.from}-{intl.row.to}</span>
                             </div>
                           ) : ''}
                         </td>
-                        <td className="px-3 py-4 text-center text-sm text-foreground font-black border-r-2 border-border">
+                        <td className="px-3 py-4 text-center text-base text-foreground font-black border-r-2 border-border">
                           {isEditMode && intl.row ? (
                             <input
                               type="text"
@@ -477,7 +497,7 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                             intl.row?.std || ''
                           )}
                         </td>
-                        <td className="px-3 py-4 text-center text-base font-black border-r-2 border-border text-foreground">
+                        <td className="px-3 py-4 text-center text-lg font-black border-r-2 border-border text-foreground">
                           {isEditMode && intl.row ? (
                             <input
                               type="text"
@@ -490,7 +510,7 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                           )}
                         </td>
                         <td className={cn(
-                          "px-3 py-4 font-black text-center text-base border-r-2 border-border",
+                          "px-3 py-4 font-black text-center text-lg border-r-2 border-border",
                           intl.row && intl.row.pax < 60 ? 'text-shadow-neon text-rose-500' : 'text-foreground/80'
                         )}>
                           {isEditMode && intl.row ? (

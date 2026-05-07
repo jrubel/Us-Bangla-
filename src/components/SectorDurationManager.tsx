@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   getAllSectors, 
   getSectorName, 
@@ -138,35 +139,49 @@ const SectorDurationManager = ({ onUpdate }: Props) => {
         </Button>
       </div>
 
-      <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-3">
-        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Add New Sector</h4>
-        <div className="grid grid-cols-4 gap-2">
-          <Input 
-            placeholder="FROM" 
-            value={newSector.from} 
-            onChange={e => setNewSector(p => ({ ...p, from: e.target.value }))}
-            className="h-8 text-[10px] font-black text-center uppercase"
-          />
-          <Input 
-            placeholder="TO" 
-            value={newSector.to} 
-            onChange={e => setNewSector(p => ({ ...p, to: e.target.value }))}
-            className="h-8 text-[10px] font-black text-center uppercase"
-          />
-          <Input 
-            placeholder="MIN" 
-            value={newSector.duration} 
-            onChange={e => setNewSector(p => ({ ...p, duration: e.target.value }))}
-            className="h-8 text-[10px] font-black text-center"
-          />
-          <Button onClick={handleAddSector} size="sm" className="h-8 text-[10px] font-black uppercase">Add</Button>
+      <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 space-y-4">
+        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Add New Sector</h4>
+        <div className="grid grid-cols-4 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-[9px] font-black uppercase tracking-widest text-primary/70 ml-1">From</Label>
+            <Input 
+              placeholder="DAC" 
+              value={newSector.from} 
+              onChange={e => setNewSector(p => ({ ...p, from: e.target.value }))}
+              className="h-10 text-xs font-black text-center uppercase bg-background"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[9px] font-black uppercase tracking-widest text-primary/70 ml-1">To</Label>
+            <Input 
+              placeholder="CGP" 
+              value={newSector.to} 
+              onChange={e => setNewSector(p => ({ ...p, to: e.target.value }))}
+              className="h-10 text-xs font-black text-center uppercase bg-background"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[9px] font-black uppercase tracking-widest text-primary/70 ml-1">Min</Label>
+            <Input 
+              placeholder="45" 
+              value={newSector.duration} 
+              onChange={e => setNewSector(p => ({ ...p, duration: e.target.value }))}
+              className="h-10 text-xs font-black text-center bg-background"
+            />
+          </div>
+          <div className="flex items-end">
+            <Button onClick={handleAddSector} size="sm" className="h-10 w-full text-[10px] font-black uppercase">Add Sector</Button>
+          </div>
         </div>
-        <Input 
-          placeholder="Sector Display Name (Optional)" 
-          value={newSector.name} 
-          onChange={e => setNewSector(p => ({ ...p, name: e.target.value }))}
-          className="h-8 text-[10px] font-bold"
-        />
+        <div className="space-y-1.5">
+          <Label className="text-[9px] font-black uppercase tracking-widest text-primary/70 ml-1">Sector Display Name (Optional)</Label>
+          <Input 
+            placeholder="e.g. DHAKA - CHITTAGONG" 
+            value={newSector.name} 
+            onChange={e => setNewSector(p => ({ ...p, name: e.target.value }))}
+            className="h-10 text-xs font-bold bg-background"
+          />
+        </div>
       </div>
       
       <div className="max-h-[600px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
@@ -189,22 +204,25 @@ const SectorDurationManager = ({ onUpdate }: Props) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-12 gap-2 mt-1">
-                <div className="col-span-8">
+              <div className="grid grid-cols-12 gap-4 mt-1">
+                <div className="col-span-8 space-y-1.5">
+                  <Label className="text-[9px] font-black uppercase tracking-widest text-foreground/50 ml-1">Display Label</Label>
                   <Input
                     value={editNames[key] ?? ''}
                     onChange={e => setEditNames(prev => ({ ...prev, [key]: e.target.value }))}
-                    className="h-8 text-[10px] font-bold bg-background/5 border-border text-foreground focus:border-primary uppercase tracking-wider"
+                    className="h-10 text-xs font-bold bg-background/50 border-border text-foreground focus:border-primary uppercase tracking-wider"
                     placeholder="Sector Name"
                   />
                 </div>
-                <div className="col-span-4 flex items-center gap-1">
-                  <Input
-                    value={editValues[key] ?? ''}
-                    onChange={e => setEditValues(prev => ({ ...prev, [key]: e.target.value }))}
-                    className="h-8 text-xs font-black bg-background/5 border-border text-foreground text-center focus:border-primary font-mono"
-                  />
-                  <span className="text-[10px] font-black text-foreground/40 uppercase tracking-tighter">MIN</span>
+                <div className="col-span-4 space-y-1.5">
+                  <Label className="text-[9px] font-black uppercase tracking-widest text-foreground/50 ml-1">Duration (MIN)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editValues[key] ?? ''}
+                      onChange={e => setEditValues(prev => ({ ...prev, [key]: e.target.value }))}
+                      className="h-10 text-xs font-black bg-background/50 border-border text-foreground text-center focus:border-primary font-mono flex-1"
+                    />
+                  </div>
                 </div>
               </div>
               

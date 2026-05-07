@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plane, Table, RefreshCw, Trash2, Copy, Globe, MapPin, LayoutGrid, BarChart3, Settings, CalendarIcon, Menu, Plus, Check, ChevronsUpDown, LogOut, Clock, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plane, Table, RefreshCw, Trash2, Copy, Globe, MapPin, LayoutGrid, BarChart3, Settings, CalendarIcon, Menu, Plus, Minus, Check, ChevronsUpDown, LogOut, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 
 type FilterMode = 'all' | 'departure' | 'arrival';
 type RouteType = 'all' | 'domestic' | 'international';
@@ -76,8 +76,14 @@ const NiceTimeInput = ({
   className?: string;
   error?: string;
 }) => {
-  const [h, m] = value && value.includes(':') ? value.split(':').map(Number) : [0, 0];
   const [pickerMode, setPickerMode] = useState<'shortcuts' | 'clock'>('clock');
+  const [internalValue, setInternalValue] = useState(value || "00:00");
+
+  useEffect(() => {
+    setInternalValue(value || "00:00");
+  }, [value]);
+
+  const [h, m] = value && value.includes(':') ? value.split(':').map(Number) : [0, 0];
 
   const adjust = (type: 'h' | 'm', amount: number) => {
     if (type === 'h') {
@@ -89,14 +95,43 @@ const NiceTimeInput = ({
     }
   };
 
-  const handleType = (type: 'h' | 'm', val: string) => {
-    const num = parseInt(val.replace(/\D/g, '').slice(0, 2)) || 0;
-    if (type === 'h') {
-      const clamped = Math.min(23, Math.max(0, num));
-      onChange(`${String(clamped).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 4);
+    let display = raw;
+    if (raw.length >= 3) {
+      display = raw.slice(0, 2) + ':' + raw.slice(2);
+    }
+    setInternalValue(display);
+
+    if (raw.length === 4) {
+      const hh = parseInt(raw.slice(0, 2));
+      const mm = parseInt(raw.slice(2, 4));
+      if (hh < 24 && mm < 60) {
+        onChange(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    let digits = internalValue.replace(/\D/g, '');
+    if (digits.length === 0) {
+      setInternalValue(value);
+      return;
+    }
+    
+    // Auto-complete patterns
+    if (digits.length === 1) digits = '0' + digits + '00';
+    else if (digits.length === 2) digits = digits + '00';
+    else if (digits.length === 3) digits = '0' + digits;
+    
+    if (digits.length === 4) {
+      const hh = Math.min(23, parseInt(digits.slice(0, 2)));
+      const mm = Math.min(59, parseInt(digits.slice(2, 4)));
+      const final = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+      setInternalValue(final);
+      onChange(final);
     } else {
-      const clamped = Math.min(59, Math.max(0, num));
-      onChange(`${String(h).padStart(2, '0')}:${String(clamped).padStart(2, '0')}`);
+      setInternalValue(value);
     }
   };
 
@@ -135,90 +170,92 @@ const NiceTimeInput = ({
         "flex items-center gap-1 p-1 bg-foreground/5 rounded-lg border border-border/50 transition-colors", 
         error && "border-destructive ring-1 ring-destructive"
       )}>
-        <div className="flex flex-col items-center">
-           <Button variant="ghost" size="icon" className="h-4 w-6 p-0 hover:bg-primary/20" onClick={() => adjust('h', 1)}>
-             <ChevronUp className="h-3 w-3" />
-           </Button>
-           <input
-             className="h-7 w-8 bg-transparent border-none focus:ring-0 text-center font-black text-xs text-primary p-0"
-             value={String(h).padStart(2, '0')}
-             onChange={(e) => handleType('h', e.target.value)}
-             maxLength={2}
-           />
-           <Button variant="ghost" size="icon" className="h-4 w-6 p-0 hover:bg-primary/20" onClick={() => adjust('h', -1)}>
-             <ChevronDown className="h-3 w-3" />
-           </Button>
-        </div>
-        <span className="font-black text-xs self-center -mt-1">:</span>
-        <div className="flex flex-col items-center">
-           <Button variant="ghost" size="icon" className="h-4 w-6 p-0 hover:bg-primary/20" onClick={() => adjust('m', 5)}>
-              <ChevronUp className="h-3 w-3" />
-           </Button>
-           <input
-             className="h-7 w-8 bg-transparent border-none focus:ring-0 text-center font-black text-xs text-primary p-0"
-             value={String(m).padStart(2, '0')}
-             onChange={(e) => handleType('m', e.target.value)}
-             maxLength={2}
-           />
-           <Button variant="ghost" size="icon" className="h-4 w-6 p-0 hover:bg-primary/20" onClick={() => adjust('m', -5)}>
-              <ChevronDown className="h-3 w-3" />
-           </Button>
-        </div>
-        <div className="flex flex-col gap-1 ml-1">
-           <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary"><Clock className="h-3 w-3" /></Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[180px] p-2 bg-background border-border shadow-2xl z-[150]" align="end">
-                <Tabs value={pickerMode} onValueChange={(v: any) => setPickerMode(v)} className="w-full">
-                  <TabsList className="grid grid-cols-2 h-7 bg-muted/50 mb-2">
-                    <TabsTrigger value="clock" className="text-[8px] font-black uppercase">Clock</TabsTrigger>
-                    <TabsTrigger value="shortcuts" className="text-[8px] font-black uppercase">Shortcuts</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="clock" className="space-y-3 mt-0">
-                    <div className="flex flex-col items-center gap-2">
-                      <ClockFace type="h" val={h} onSel={(v) => onChange(`${String(v).padStart(2, '0')}:${String(m).padStart(2, '0')}`)} />
-                      <div className="w-full h-px bg-border/50" />
-                      <div className="flex gap-1 flex-wrap justify-center">
-                        {[0, 15, 30, 45].map(min => (
-                          <Button 
-                            key={min} 
-                            variant="ghost" 
-                            className={cn("h-6 text-[9px] font-black px-2 bg-primary/10", m === min && "bg-primary text-primary-foreground")}
-                            onClick={() => onChange(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`)}
-                          >
-                            :{String(min).padStart(2, '0')}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="shortcuts" className="mt-0">
-                    <div className="grid grid-cols-3 gap-1">
-                      {["02:00", "04:30", "06:00", "08:15", "10:00", "12:00", "14:00", "16:00", "18:00"].map(t => (
+        <Input 
+          className="h-7 flex-1 bg-transparent border-none text-center font-black text-xs text-primary focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
+          value={internalValue}
+          onChange={handleInputChange}
+          onBlur={handleBlur}
+          placeholder="HHMM"
+          maxLength={5}
+        />
+        
+        <div className="flex items-center gap-0.5 border-l border-border/30 pl-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 hover:bg-primary/20 text-muted-foreground"
+            onClick={() => adjust('m', -5)}
+          >
+            <Minus className="h-3 w-3" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 hover:bg-primary/20 text-muted-foreground"
+            onClick={() => adjust('m', 5)}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary transition-colors">
+                <Clock className="h-3 w-3" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[180px] p-2 bg-background border-border shadow-2xl z-[150]" align="end">
+              <Tabs value={pickerMode} onValueChange={(v) => setPickerMode(v as 'shortcuts' | 'clock')} className="w-full">
+                <TabsList className="grid grid-cols-2 h-7 bg-muted/50 mb-2">
+                  <TabsTrigger value="clock" className="text-[8px] font-black uppercase">Clock</TabsTrigger>
+                  <TabsTrigger value="shortcuts" className="text-[8px] font-black uppercase">Shortcuts</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="clock" className="space-y-3 mt-0">
+                  <div className="flex flex-col items-center gap-2">
+                    <ClockFace type="h" val={h} onSel={(v) => onChange(`${String(v).padStart(2, '0')}:${String(m).padStart(2, '0')}`)} />
+                    <div className="w-full h-px bg-border/50" />
+                    <div className="flex gap-1 flex-wrap justify-center">
+                      {[0, 15, 30, 45].map(min => (
                         <Button 
-                          key={t} 
+                          key={min} 
                           variant="ghost" 
-                          className="h-6 text-[9px] font-bold p-1 bg-foreground/5 hover:bg-primary/20" 
-                          onClick={() => onChange(t)}
+                          className={cn("h-6 text-[9px] font-black px-2 bg-primary/10", m === min && "bg-primary text-primary-foreground")}
+                          onClick={() => onChange(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`)}
                         >
-                          {t}
+                          :{String(min).padStart(2, '0')}
                         </Button>
                       ))}
-                      <Button 
-                        variant="destructive" 
-                        className="h-6 text-[9px] font-bold p-1 col-span-3 mt-1 uppercase tracking-widest" 
-                        onClick={() => onChange("00:00")}
-                      >
-                        Reset
-                      </Button>
                     </div>
-                  </TabsContent>
-                </Tabs>
-              </PopoverContent>
-           </Popover>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="shortcuts" className="mt-0">
+                  <div className="grid grid-cols-3 gap-1">
+                    {["00:00", "06:00", "08:15", "10:30", "12:00", "14:00", "16:00", "18:00", "22:00"].map(t => (
+                      <Button 
+                        key={t} 
+                        variant="ghost" 
+                        className={cn("h-6 text-[9px] font-bold p-1 bg-foreground/5 hover:bg-primary/20", value === t && "bg-primary/20 text-primary")} 
+                        onClick={() => onChange(t)}
+                      >
+                        {t}
+                      </Button>
+                    ))}
+                    <Button 
+                      variant="outline" 
+                      className="h-6 text-[9px] font-bold p-1 col-span-3 mt-1 uppercase tracking-widest border-primary/30" 
+                      onClick={() => {
+                        const now = new Date();
+                        onChange(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+                      }}
+                    >
+                      Now
+                    </Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
       {error && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest pl-1 mt-0.5">{error}</p>}
@@ -292,8 +329,15 @@ const Index = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [isReturnLegEnabled, setIsReturnLegEnabled] = useState(false);
-  const [isViaCGPEnabled, setIsViaCGPEnabled] = useState(false);
+  const [isReturnLegEnabled, setIsReturnLegEnabled] = useState(true);
+  const [outboundViaCGP, setOutboundViaCGP] = useState(false);
+  const [returnViaCGP, setReturnViaCGP] = useState(false);
+  const [outboundConFlightNo, setOutboundConFlightNo] = useState('');
+  const [returnConFlightNo, setReturnConFlightNo] = useState('');
+  const [outboundCgpStd, setOutboundCgpStd] = useState('');
+  const [returnCgpStd, setReturnCgpStd] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [groundTime, setGroundTime] = useState(60);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [newFlight, setNewFlight] = useState<Partial<FlightRow & { duration: number }>>({
     flightNo: '',
@@ -302,8 +346,6 @@ const Index = () => {
     std: '',
     eta: '',
     duration: 0,
-    aircraft: '-',
-    reg: '',
     pax: 0,
     sn: 0
   });
@@ -339,17 +381,20 @@ const Index = () => {
     // Always include DAC
     s.add('DAC');
     return Array.from(s).sort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [destRefreshTrigger]);
 
-  const destinations = useMemo(() => getAvailableDestinations(newFlight.from || 'DAC'), [newFlight.from, destRefreshTrigger]);
+  const destinations = useMemo(() => getAvailableDestinations(newFlight.from || 'DAC'), 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [newFlight.from, destRefreshTrigger]
+  );
 
   const calculateReturnFlightNo = (flightNo: string): string => {
     const match = flightNo.match(/\d+/);
     if (!match) return '';
     const num = parseInt(match[0], 10);
-    // Always add +1, if result is odd, add another +1 to make it even
-    const nextNum = (num + 1) % 2 === 0 ? num + 1 : num + 2;
-    return nextNum.toString();
+    // Simple increment for return flight
+    return (num + 1).toString();
   };
 
   const updateNewFlightField = (field: keyof (FlightRow & { duration: number }), value: string | number) => {
@@ -382,8 +427,26 @@ const Index = () => {
           });
         }
       }
-      if (field === 'to' && !['DXB', 'AUH', 'MCT', 'DOH'].includes(updated.to || '')) {
-        setIsViaCGPEnabled(false);
+      if (field === 'to' && updated.to === 'CGP' && updated.from === 'DAC') {
+        setOutboundViaCGP(true);
+        updated.to = 'DXB'; // Suggest DXB as final destination
+        if (updated.flightNo) setOutboundConFlightNo(updated.flightNo);
+        if (isReturnLegEnabled) setReturnViaCGP(true);
+        toast.info("Switched to Int'l Connection (Leg 1: DAC-CGP, Leg 2: CGP-DXB)");
+      } else if (field === 'to' && updated.to === 'CGP' && isInternationalFlight({ from: updated.from || 'DAC', to: 'DAC' } as FlightRow)) {
+        setOutboundViaCGP(true);
+        updated.to = 'DAC'; // Final destination is DAC
+        if (updated.flightNo) setOutboundConFlightNo(updated.flightNo);
+        if (isReturnLegEnabled) setReturnViaCGP(true);
+        toast.info("Switched to Int'l Connection (Leg 1: " + updated.from + "-CGP, Leg 2: CGP-DAC)");
+      } else if (field === 'to') {
+        // If selecting destination directly (e.g. DAC-DXB), disable auto-connection
+        setOutboundViaCGP(false);
+        setReturnViaCGP(false);
+      }
+      
+      if (updated.flightNo) {
+        if (!outboundConFlightNo) setOutboundConFlightNo(updated.flightNo);
       }
     }
     
@@ -437,6 +500,11 @@ const Index = () => {
     setReturnFlight(updated);
   };
 
+  const handleManualEntryClose = () => {
+    setIsManualEntryOpen(false);
+    setFormErrors({});
+  };
+
   const handleManualAdd = () => {
     // Validation
     const errors: Record<string, string> = {};
@@ -458,7 +526,6 @@ const Index = () => {
       errors.std = 'Invalid HH:MM';
     }
 
-    if (!newFlight.aircraft || newFlight.aircraft === '-') errors.aircraft = 'Required';
     if (!newFlight.reg) errors.reg = 'Required';
     
     if (!newFlight.duration || newFlight.duration <= 0) errors.duration = 'Required';
@@ -491,29 +558,36 @@ const Index = () => {
 
     const flightsToAdd: FlightRow[] = [];
     
-    if (isViaCGPEnabled) {
-      // Logic for multi-sector via CGP: from -> CGP -> to
+    const isDuplicate = (f: FlightRow) => {
+      return data.some(existing => 
+        existing.flightNo === f.flightNo && 
+        existing.from === f.from && 
+        existing.to === f.to && 
+        existing.std === f.std
+      );
+    };
+
+    // Handle Outbound
+    if (outboundViaCGP) {
       // Outbound Leg 1: from -> CGP
       const sector1Dur = getSectorDuration(newFlight.from || '', 'CGP') || 55;
       const sector1Eta = calculateETAFromDuration(newFlight.std || '00:00', sector1Dur);
       
       const outboundSector1: FlightRow = {
-        flightNo: `BS ${newFlight.flightNo}`,
+        flightNo: `BS ${outboundConFlightNo || newFlight.flightNo}`,
         from: newFlight.from || '',
         to: 'CGP',
         std: newFlight.std || '',
         eta: sector1Eta,
-        aircraft: newFlight.aircraft || '-',
+        aircraft: '-',
         reg: `S2-${newFlight.reg || ''}`,
-        pax: Math.floor(Number(newFlight.pax) * 0.4) || 0, // Assume some split or let user edit later
-        sn: data.length + 1
+        pax: Math.floor(Number(newFlight.pax) * 0.4) || 0,
+        sn: data.length + flightsToAdd.length + 1
       };
       flightsToAdd.push(outboundSector1);
 
       // Outbound Leg 2: CGP -> to
-      // 60 min ground time at CGP
-      const groundTime = 60;
-      const sector2Std = calculateETAFromDuration(sector1Eta, groundTime);
+      const sector2Std = outboundCgpStd || calculateETAFromDuration(sector1Eta, groundTime);
       const sector2Dur = getSectorDuration('CGP', newFlight.to || '') || 360;
       const sector2Eta = calculateETAFromDuration(sector2Std, sector2Dur);
 
@@ -523,15 +597,30 @@ const Index = () => {
         to: newFlight.to || '',
         std: sector2Std,
         eta: sector2Eta,
-        aircraft: newFlight.aircraft || '-',
+        aircraft: '-',
         reg: `S2-${newFlight.reg || ''}`,
         pax: Number(newFlight.pax) || 0,
-        sn: data.length + 2
+        sn: data.length + flightsToAdd.length + 1
       };
       flightsToAdd.push(outboundSector2);
+    } else {
+      const flightToAdd: FlightRow = {
+        flightNo: `BS ${newFlight.flightNo}`,
+        from: newFlight.from || '',
+        to: newFlight.to || '',
+        std: newFlight.std || '',
+        eta: newFlight.eta || '',
+        aircraft: '-',
+        reg: `S2-${newFlight.reg || ''}`,
+        pax: Number(newFlight.pax) || 0,
+        sn: data.length + flightsToAdd.length + 1
+      };
+      flightsToAdd.push(flightToAdd);
+    }
 
-      // Return Leg via CGP
-      if (isReturnLegEnabled) {
+    // Handle Return
+    if (isReturnLegEnabled) {
+      if (returnViaCGP) {
         // Return Leg 1: to -> CGP
         const retSector1Dur = getSectorDuration(newFlight.to || '', 'CGP') || 360;
         const retSector1Eta = calculateETAFromDuration(returnFlight.std || '00:00', retSector1Dur);
@@ -542,70 +631,82 @@ const Index = () => {
           to: 'CGP',
           std: returnFlight.std || '',
           eta: retSector1Eta,
-          aircraft: newFlight.aircraft || '-',
+          aircraft: '-',
           reg: `S2-${newFlight.reg || ''}`,
           pax: Number(returnFlight.pax) || 0,
-          sn: data.length + 3
+          sn: data.length + flightsToAdd.length + 1
         };
         flightsToAdd.push(returnSector1);
 
         // Return Leg 2: CGP -> from
-        const retSector2Std = calculateETAFromDuration(retSector1Eta, groundTime);
+        const retSector2Std = returnCgpStd || calculateETAFromDuration(retSector1Eta, groundTime);
         const retSector2Dur = getSectorDuration('CGP', newFlight.from || '') || 55;
         const retSector2Eta = calculateETAFromDuration(retSector2Std, retSector2Dur);
 
         const returnSector2: FlightRow = {
-          flightNo: `BS ${returnFlight.flightNo}`,
+          flightNo: `BS ${returnConFlightNo || returnFlight.flightNo}`,
           from: 'CGP',
           to: newFlight.from || '',
           std: retSector2Std,
           eta: retSector2Eta,
-          aircraft: newFlight.aircraft || '-',
+          aircraft: '-',
           reg: `S2-${newFlight.reg || ''}`,
           pax: Math.floor(Number(returnFlight.pax) * 0.4) || 0,
-          sn: data.length + 4
+          sn: data.length + flightsToAdd.length + 1
         };
         flightsToAdd.push(returnSector2);
-      }
-    } else {
-      // Standard Direct Flight
-      const flightToAdd: FlightRow = {
-        flightNo: `BS ${newFlight.flightNo}`,
-        from: newFlight.from || '',
-        to: newFlight.to || '',
-        std: newFlight.std || '',
-        eta: newFlight.eta || '',
-        aircraft: newFlight.aircraft || '-',
-        reg: `S2-${newFlight.reg || ''}`,
-        pax: Number(newFlight.pax) || 0,
-        sn: data.length + 1
-      };
-      flightsToAdd.push(flightToAdd);
-
-      if (isReturnLegEnabled) {
+      } else {
         const retFlightToAdd: FlightRow = {
           flightNo: `BS ${returnFlight.flightNo}`,
           from: newFlight.to || '',
           to: newFlight.from || '',
           std: returnFlight.std || '',
           eta: returnFlight.eta || '',
-          aircraft: newFlight.aircraft || '-',
+          aircraft: '-',
           reg: `S2-${newFlight.reg || ''}`,
           pax: Number(returnFlight.pax) || 0,
-          sn: data.length + 2
+          sn: data.length + flightsToAdd.length + 1
         };
         flightsToAdd.push(retFlightToAdd);
       }
     }
 
+    // Final Duplicate Verification
+    for (const f of flightsToAdd) {
+      if (isDuplicate(f)) {
+        toast.error(`Duplicate flight: ${f.flightNo} (${f.from}-${f.to}) at ${f.std}`);
+        return;
+      }
+    }
+
+    // Format to string for raw input storage
+    const flightToText = (f: FlightRow) => {
+      const parts = f.flightNo.split(' ');
+      const airline = parts[0] || 'BS';
+      const num = parts[1] || '';
+      const reg = f.reg.replace(/^S2-/, '');
+      return `${airline} ${num} ${f.from} ${f.to} ${f.std} ${f.eta} - ${reg} ${f.pax}`;
+    };
+
+    const newEntries = flightsToAdd.map(flightToText).join('\n');
+    const updatedInput = input.trim() ? `${input.trim()}\n${newEntries}` : newEntries;
+    
     const updated = [...data, ...flightsToAdd];
     setData(updated);
+    setInput(updatedInput);
     localStorage.setItem('flightData', JSON.stringify(updated));
+    localStorage.setItem('flightInput', updatedInput);
+    
     toast.success(isReturnLegEnabled ? 'Flights added with return' : 'Flight added');
     
     setIsManualEntryOpen(false);
-    setIsReturnLegEnabled(false);
-    setIsViaCGPEnabled(false);
+    setIsReturnLegEnabled(true);
+    setOutboundViaCGP(false);
+    setReturnViaCGP(false);
+    setOutboundConFlightNo('');
+    setReturnConFlightNo('');
+    setOutboundCgpStd('');
+    setReturnCgpStd('');
     
     // Reset state
     setNewFlight({
@@ -615,7 +716,6 @@ const Index = () => {
       std: '',
       eta: '',
       duration: 0,
-      aircraft: '-',
       reg: '',
       pax: 0,
       sn: 0
@@ -628,6 +728,22 @@ const Index = () => {
       pax: 0
     });
   };
+
+  useEffect(() => {
+    if (outboundViaCGP && newFlight.std && newFlight.from) {
+      const sector1Dur = getSectorDuration(newFlight.from || '', 'CGP') || 55;
+      const sector1Eta = calculateETAFromDuration(newFlight.std || '00:00', sector1Dur);
+      setOutboundCgpStd(calculateETAFromDuration(sector1Eta, groundTime));
+    }
+  }, [outboundViaCGP, newFlight.from, newFlight.std, groundTime]);
+
+  useEffect(() => {
+    if (returnViaCGP && returnFlight.std && newFlight.to) {
+      const retSector1Dur = getSectorDuration(newFlight.to || '', 'CGP') || 360;
+      const retSector1Eta = calculateETAFromDuration(returnFlight.std || '00:00', retSector1Dur);
+      setReturnCgpStd(calculateETAFromDuration(retSector1Eta, groundTime));
+    }
+  }, [returnViaCGP, returnFlight.std, groundTime, newFlight.to]);
 
   useEffect(() => {
     if (isManualEntryOpen) {
@@ -655,7 +771,22 @@ const Index = () => {
     localStorage.setItem('flightInput', val);
   };
 
-  const formattedDate = format(selectedDate, 'EEE, dd MMM yyyy');
+  // Auto-parse input when it changes or when sector configuration is updated
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (input.trim()) {
+        const rows = parseFlightData(input);
+        if (rows.length > 0) {
+          setData(rows);
+          localStorage.setItem('flightData', JSON.stringify(rows));
+        }
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [input, destRefreshTrigger]);
+
+  const formattedDate = format(selectedDate, 'EEEE, dd MMM yyyy');
 
   const shiftFilteredData = useMemo(() => {
     return data.filter(r => isFlightInShift(r, shift));
@@ -930,7 +1061,7 @@ const Index = () => {
               <LiveClock />
             </div>
             <div className="hidden sm:block h-3 w-px bg-border" />
-            <div className="hidden sm:flex items-center gap-2 text-[10px] uppercase font-bold text-muted-foreground tracking-wider shrink-0">
+            <div className="hidden sm:flex items-center gap-2 text-xs uppercase font-bold text-muted-foreground tracking-wider shrink-0">
               <CalendarIcon className="w-3 h-3 text-muted-foreground/60" />
               {formattedDate}
             </div>
@@ -1160,61 +1291,60 @@ const Index = () => {
       </main>
 
       <Dialog open={isManualEntryOpen} onOpenChange={setIsManualEntryOpen}>
-        <DialogContent className="bg-popover border-border text-popover-foreground sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xs font-black uppercase tracking-[0.3em] text-primary">New Flight Entry</DialogTitle>
-            <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mt-1">Manual telemetry injection</DialogDescription>
+        <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-xl border-primary/20 p-0 gap-0">
+          <DialogHeader className="px-6 py-4 bg-primary/5 border-b border-primary/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+                  <Plane className="mr-2 h-3.5 w-3.5 text-primary" />
+                  Manual Flight Entry
+                </DialogTitle>
+                <DialogDescription className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest mt-1">Flight Pair Configuration</DialogDescription>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={cn("h-7 px-2 text-[10px] font-black uppercase hover:bg-primary/10", showAdvanced ? "text-primary" : "text-muted-foreground")}
+                onClick={() => setShowAdvanced(!showAdvanced)}
+              >
+                {showAdvanced ? 'Simple' : 'Advanced'}
+              </Button>
+            </div>
           </DialogHeader>
           
-          <div className="space-y-6 py-4">
-            {/* Primary Leg */}
+          <div className="p-4 space-y-4">
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">Main Sector</span>
-                <div className="h-px flex-1 bg-primary/10 ml-4"></div>
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="aircraft" className="text-right text-[10px] font-black uppercase tracking-widest">Aircraft</Label>
-                <div className="col-span-3 space-y-1">
-                  <Select 
-                    value={newFlight.aircraft} 
-                    onValueChange={val => updateNewFlightField('aircraft', val)}
-                  >
-                    <SelectTrigger id="aircraft" className={cn("h-8 text-xs bg-background/50 border-border", formErrors.aircraft && "border-destructive ring-1 ring-destructive")}>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[110]">
-                      <SelectItem value="ATR 72-600">ATR 72-600</SelectItem>
-                      <SelectItem value="Boeing 737-800">Boeing 737-800</SelectItem>
-                      <SelectItem value="Airbus A330">Airbus A330</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {formErrors.aircraft && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest">{formErrors.aircraft}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="flightNo" className="text-right text-[10px] font-black uppercase tracking-widest">Flight No</Label>
-                <div className="col-span-3 space-y-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="flightNo" className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Flight No</Label>
                   <div className="flex items-center">
                     <span className={cn("bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-primary", formErrors.flightNo && "border-destructive")}>BS</span>
                     <Input 
                       id="flightNo" 
                       value={newFlight.flightNo} 
                       onChange={e => updateNewFlightField('flightNo', e.target.value.toUpperCase())}
-                      className={cn("h-8 text-xs bg-background/50 border-border rounded-l-none", formErrors.flightNo && "border-destructive ring-1 ring-destructive")}
+                      className={cn("h-8 text-xs bg-background/50 border-border rounded-l-none font-bold", formErrors.flightNo && "border-destructive ring-1 ring-destructive")}
                       placeholder="101"
                     />
                   </div>
                   {formErrors.flightNo && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest">{formErrors.flightNo}</p>}
                 </div>
+                <div className="space-y-1">
+                  <Label htmlFor="pax" className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Pax Count</Label>
+                  <Input 
+                    id="pax" 
+                    type="number"
+                    min="0"
+                    value={newFlight.pax} 
+                    onChange={e => updateNewFlightField('pax', Number(e.target.value))}
+                    className={cn("h-8 text-xs bg-background/50 border-border font-bold", formErrors.pax && "border-destructive ring-1 ring-destructive")} 
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-12 items-center gap-4">
-                <Label className="col-span-3 text-right text-[10px] font-black uppercase tracking-widest">Vector</Label>
-                <div className="col-span-9 space-y-1">
-                  <div className="flex items-center gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Sector Vector</Label>
+                <div className="flex items-center gap-2">
                     <Popover open={originComboboxOpen} onOpenChange={setOriginComboboxOpen}>
                       <PopoverTrigger asChild>
                         <Button
@@ -1314,34 +1444,31 @@ const Index = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right text-[10px] font-black uppercase tracking-widest">Telemetry</Label>
-                <div className="col-span-3 space-y-3">
-                  <div className="flex items-start gap-4">
+                <div className="p-3 bg-primary/5 rounded-xl border border-primary/10 space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
                     <NiceTimeInput 
                       label="Departure (STD)" 
                       value={newFlight.std || "00:00"} 
                       onChange={val => updateNewFlightField('std', val)}
-                      className="flex-1"
                       error={formErrors.std}
                     />
                     
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-[9px] uppercase font-black text-primary/70 ml-1">Block Time (Min)</Label>
+                    <div className="space-y-1">
+                      <Label className="text-[9px] uppercase font-black text-primary/70 ml-1 text-center block">Block Time</Label>
                       <div className={cn(
-                        "flex flex-col gap-1.5 p-1 bg-foreground/5 rounded-lg border border-border/50",
+                        "flex items-center gap-1.5 p-1 bg-background border border-border/50 rounded-lg",
                         formErrors.duration && "border-destructive ring-1 ring-destructive"
                       )}>
                         <Input 
                           value={newFlight.duration || ''} 
                           onChange={e => updateNewFlightField('duration', Number(e.target.value))}
-                          className="h-7 text-xs bg-transparent border-none text-center px-1 font-black text-primary focus-visible:ring-0" 
+                          className="h-7 text-xs bg-transparent border-none text-center px-1 font-black text-primary focus-visible:ring-0 w-12" 
                           placeholder="0"
                           type="number"
                           min="0"
                         />
-                        <div className="flex gap-1">
-                          {[10, 60].map(val => (
+                        <div className="flex gap-1 flex-1">
+                          {[15, 60].map(val => (
                             <Button 
                               key={val}
                               variant="ghost" 
@@ -1354,13 +1481,6 @@ const Index = () => {
                               +{val}
                             </Button>
                           ))}
-                          <Button 
-                            variant="ghost" 
-                            className="h-5 flex-1 text-[8px] font-black p-0 hover:bg-destructive/20 bg-destructive/5 text-destructive"
-                            onClick={() => updateNewFlightField('duration', 0)}
-                          >
-                            CLR
-                          </Button>
                         </div>
                       </div>
                       {formErrors.duration && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest pl-1">{formErrors.duration}</p>}
@@ -1370,228 +1490,167 @@ const Index = () => {
                     label="Arrival (ETA - Computed)" 
                     value={newFlight.eta || "00:00"} 
                     onChange={val => updateNewFlightField('eta', val)}
-                    className="w-full"
+                    className="opacity-70"
                     error={formErrors.eta}
                   />
                 </div>
-              </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="pax" className="text-right text-[10px] font-black uppercase tracking-widest">Payload</Label>
-                <div className="col-span-3 space-y-1">
-                  <Input 
-                    id="pax" 
-                    type="number"
-                    min="0"
-                    value={newFlight.pax} 
-                    onChange={e => updateNewFlightField('pax', Number(e.target.value))}
-                    className={cn("h-8 text-xs bg-background/50 border-border", formErrors.pax && "border-destructive ring-1 ring-destructive")} 
-                  />
-                  {formErrors.pax && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest leading-none">{formErrors.pax}</p>}
-                </div>
-              </div>
-            </div>
-
-            {/* Return Leg Toggle */}
-            <div className="flex flex-col gap-3 p-3 bg-foreground/5 rounded-xl border border-border">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-[10px] font-black text-foreground uppercase tracking-widest cursor-pointer" htmlFor="return-leg">Add Return Leg</Label>
-                  <p className="text-[9px] text-muted-foreground font-bold uppercase">Automated pair creation</p>
-                </div>
-                <Switch 
-                  id="return-leg"
-                  checked={isReturnLegEnabled}
-                  onCheckedChange={(checked) => {
-                    setIsReturnLegEnabled(checked);
-                    if (checked) {
-                      const returnNo = newFlight.flightNo ? calculateReturnFlightNo(newFlight.flightNo) : '';
-                      const returnDur = (newFlight.from && newFlight.to) 
-                        ? (getSectorDuration(newFlight.to, newFlight.from) || newFlight.duration || 0) 
-                        : (newFlight.duration || 0);
-                      
-                      setReturnFlight(prev => {
-                        const newReturn = { 
-                          ...prev, 
-                          flightNo: returnNo,
-                          duration: returnDur
-                        };
-                        if (newReturn.std && newReturn.duration) {
-                          newReturn.eta = calculateETAFromDuration(newReturn.std, newReturn.duration);
-                        }
-                        return newReturn;
-                      });
-                    }
-                  }}
-                />
+                <Label htmlFor="pax" className="sr-only">Payload</Label>
               </div>
 
-              {/* Via CGP Toggle - Only for specific destinations or from DAC */}
-              {['DXB', 'AUH', 'MCT', 'DOH'].includes(newFlight.to || '') && (
-                <div className="flex items-center justify-between pt-2 border-t border-border/50">
+              <AnimatePresence>
+                {showAdvanced && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="grid grid-cols-2 gap-3 overflow-hidden p-3 bg-foreground/5 rounded-xl border border-border"
+                  >
+                    <div className="space-y-1">
+                      <Label htmlFor="reg" className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">REG</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary/50">S2-</span>
+                        <Input 
+                          id="reg" 
+                          value={newFlight.reg} 
+                          onChange={e => updateNewFlightField('reg', e.target.value.toUpperCase())}
+                          className="h-8 pl-8 text-xs bg-background border-border font-bold" 
+                          placeholder="AHC"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="aircraft" className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">AC Type</Label>
+                      <Input 
+                        id="aircraft" 
+                        value={newFlight.aircraft} 
+                        onChange={e => updateNewFlightField('aircraft', e.target.value.toUpperCase())}
+                        className="h-8 text-xs bg-background border-border font-bold" 
+                        placeholder="738 / AT7"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+            {/* Configuration Options */}
+            <div className="space-y-3">
+              <div className="flex flex-col gap-3 p-3 bg-secondary/5 rounded-xl border border-secondary/20">
+                <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label className="text-[10px] font-black text-foreground uppercase tracking-widest cursor-pointer" htmlFor="via-cgp">Via CGP (Chittagong)</Label>
-                    <p className="text-[9px] text-muted-foreground font-bold uppercase">Multi-sector connecting flight</p>
+                    <Label className="text-[10px] font-black text-foreground uppercase tracking-widest cursor-pointer" htmlFor="return-leg">Add Return Pair</Label>
+                    <p className="text-[9px] text-muted-foreground font-bold uppercase">Generate opposite sector</p>
                   </div>
                   <Switch 
-                    id="via-cgp"
-                    checked={isViaCGPEnabled}
-                    onCheckedChange={setIsViaCGPEnabled}
+                    id="return-leg"
+                    checked={isReturnLegEnabled}
+                    onCheckedChange={(checked) => {
+                      setIsReturnLegEnabled(checked);
+                      if (checked) {
+                        const returnNo = newFlight.flightNo ? calculateReturnFlightNo(newFlight.flightNo) : '';
+                        const returnDur = (newFlight.from && newFlight.to) 
+                          ? (getSectorDuration(newFlight.to, newFlight.from) || newFlight.duration || 0) 
+                          : (newFlight.duration || 0);
+                        
+                        setReturnFlight(prev => ({ 
+                          ...prev, 
+                          flightNo: returnNo,
+                          duration: Number(returnDur),
+                          pax: newFlight.pax || 0
+                        }));
+                        if (outboundViaCGP) setReturnViaCGP(true);
+                      }
+                    }}
                   />
                 </div>
-              )}
-            </div>
-
-            {/* Return Leg Details */}
-            <AnimatePresence>
-              {isReturnLegEnabled && (
-                <motion.div 
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="space-y-4 overflow-hidden"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-secondary/70">Return Leg</span>
-                    <div className="h-px flex-1 bg-secondary/10 ml-4"></div>
-                  </div>
-
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="ret-flightNo" className="text-right text-[10px] font-black uppercase tracking-widest">Flight No</Label>
-                    <div className="col-span-3 space-y-1">
-                      <div className="flex items-center">
-                        <span className={cn("bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-secondary", formErrors.retFlightNo && "border-destructive")}>BS</span>
-                        <Input 
-                          id="ret-flightNo" 
-                          value={returnFlight.flightNo} 
-                          onChange={e => updateReturnFlightField('flightNo', e.target.value.toUpperCase())}
-                          className={cn("h-8 text-xs bg-background/50 border-border rounded-l-none", formErrors.retFlightNo && "border-destructive ring-1 ring-destructive")} 
-                          placeholder="102"
+                <AnimatePresence>
+                  {isReturnLegEnabled && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="space-y-3 pt-3 border-t border-secondary/10 overflow-hidden"
+                    >
+                      <div className="grid grid-cols-2 gap-3">
+                        <NiceTimeInput 
+                          label="Return STD" 
+                          value={returnFlight.std || "00:00"} 
+                          onChange={val => updateReturnFlightField('std', val)}
+                          error={formErrors.retStd}
                         />
-                      </div>
-                      {formErrors.retFlightNo && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest">{formErrors.retFlightNo}</p>}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 items-center gap-4">
-                    <Label className="col-span-3 text-right text-[10px] font-black uppercase tracking-widest">Vector</Label>
-                    <div className="col-span-9 flex items-center gap-2 opacity-80">
-                      <div className="flex-1 h-8 bg-foreground/5 border border-border rounded-md flex items-center justify-center text-[10px] font-black text-secondary">
-                        {newFlight.to || 'DEST'}
-                      </div>
-                      <span className="text-muted-foreground text-xs font-bold">/</span>
-                      <div className="flex-1 h-8 bg-foreground/5 border border-border rounded-md flex items-center justify-center text-[10px] font-black text-secondary">
-                        DAC
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right text-[10px] font-black uppercase tracking-widest">Telemetry</Label>
-                    <div className="col-span-3 space-y-3">
-                      <div className="flex items-start gap-4">
-                          <NiceTimeInput 
-                            label={`DEP FROM ${newFlight.to || 'DEST'}`} 
-                            value={returnFlight.std || "00:00"} 
-                            onChange={val => updateReturnFlightField('std', val)}
-                            className="flex-1"
-                            error={formErrors.retStd}
-                          />
-                          
-                          <div className="flex-1 space-y-1">
-                            <Label className="text-[9px] uppercase font-black text-secondary/70 ml-1">Block Time (Min)</Label>
-                            <div className={cn(
-                              "flex flex-col gap-1.5 p-1 bg-foreground/5 rounded-lg border border-border/50",
-                              formErrors.retDuration && "border-destructive ring-1 ring-destructive"
-                            )}>
-                              <Input 
-                                value={returnFlight.duration || ''} 
-                                onChange={e => updateReturnFlightField('duration', Number(e.target.value))}
-                                className="h-7 text-xs bg-transparent border-none text-center px-1 font-black text-secondary focus-visible:ring-0" 
-                                placeholder="0"
-                                type="number"
-                                min="0"
-                              />
-                              <div className="flex gap-1">
-                                {[10, 60].map(val => (
-                                  <Button 
-                                    key={val}
-                                    variant="ghost" 
-                                    className="h-5 flex-1 text-[8px] font-black p-0 hover:bg-secondary/20 bg-secondary/5"
-                                    onClick={() => {
-                                      const current = Number(returnFlight.duration) || 0;
-                                      updateReturnFlightField('duration', current + val);
-                                    }}
-                                  >
-                                    +{val}
-                                  </Button>
-                                ))}
-                                <Button 
-                                  variant="ghost" 
-                                  className="h-5 flex-1 text-[8px] font-black p-0 hover:bg-destructive/20 bg-destructive/5 text-destructive"
-                                  onClick={() => updateReturnFlightField('duration', 0)}
-                                >
-                                  CLR
-                                </Button>
-                              </div>
-                            </div>
-                            {formErrors.retDuration && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest pl-1">{formErrors.retDuration}</p>}
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-secondary/70 ml-1">Return No</Label>
+                          <div className="flex items-center">
+                            <span className="bg-foreground/5 h-8 px-2.5 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-secondary/50">BS</span>
+                            <Input 
+                              value={returnFlight.flightNo} 
+                              onChange={e => updateReturnFlightField('flightNo', e.target.value.toUpperCase())}
+                              className="h-8 text-xs bg-background border-border rounded-l-none font-bold"
+                            />
                           </div>
                         </div>
-  
-                        <NiceTimeInput 
-                          label="ARR AT DAC (Computed)" 
-                          value={returnFlight.eta || "00:00"} 
-                          onChange={val => updateReturnFlightField('eta', val)}
-                          className="w-full"
-                          error={formErrors.retEta}
-                        />
-                    </div>
-                  </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="ret-pax" className="text-right text-[10px] font-black uppercase tracking-widest">Payload</Label>
-                    <div className="col-span-3 space-y-1">
-                      <Input 
-                        id="ret-pax" 
-                        type="number"
-                        min="0"
-                        value={returnFlight.pax} 
-                        onChange={e => updateReturnFlightField('pax', Number(e.target.value))}
-                        className={cn("h-8 text-xs bg-background/50 border-border", formErrors.retPax && "border-destructive ring-1 ring-destructive")} 
-                      />
-                      {formErrors.retPax && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest leading-none">{formErrors.retPax}</p>}
+              {(newFlight.to !== 'CGP' && newFlight.from !== 'CGP') && (
+                <div className="flex flex-col gap-3 p-3 bg-primary/5 rounded-xl border border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-[10px] font-black text-foreground uppercase tracking-widest cursor-pointer" htmlFor="outbound-via-cgp">Route via CGP</Label>
+                      <p className="text-[9px] text-muted-foreground font-bold uppercase">{newFlight.from || '---'}-CGP-{newFlight.to || '---'}</p>
                     </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Shared Registry */}
-            <div className="pt-2 border-t border-border mt-2">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="reg" className="text-right text-[10px] font-black uppercase tracking-widest">Registry</Label>
-                <div className="col-span-3 space-y-1">
-                  <div className="flex items-center">
-                    <span className={cn("bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-muted-foreground", formErrors.reg && "border-destructive")}>S2-</span>
-                    <Input 
-                      id="reg" 
-                      value={newFlight.reg} 
-                      maxLength={3}
-                      onChange={e => updateNewFlightField('reg', e.target.value.toUpperCase())}
-                      className={cn("h-8 text-xs bg-background/50 border-border rounded-l-none", formErrors.reg && "border-destructive ring-1 ring-destructive")}
-                      placeholder="AFF"
+                    <Switch 
+                      id="outbound-via-cgp"
+                      checked={outboundViaCGP}
+                      onCheckedChange={(checked) => {
+                        setOutboundViaCGP(checked);
+                        if (checked && !outboundConFlightNo) setOutboundConFlightNo(newFlight.flightNo || '');
+                      }}
                     />
                   </div>
-                  {formErrors.reg && <p className="text-[9px] font-bold text-destructive uppercase tracking-widest">{formErrors.reg}</p>}
+                  <AnimatePresence>
+                    {outboundViaCGP && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="space-y-3 pt-3 border-t border-primary/10 overflow-hidden"
+                      >
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-[8px] font-black uppercase text-primary/60 ml-0.5">Conn Flt No</Label>
+                            <div className="flex items-center">
+                              <span className="bg-foreground/5 h-7 px-1.5 flex items-center text-[8px] font-black border border-r-0 border-border rounded-l text-primary/50">BS</span>
+                              <Input 
+                                value={outboundConFlightNo}
+                                onChange={e => setOutboundConFlightNo(e.target.value)}
+                                className="h-7 text-[10px] bg-background border-border rounded-l-none font-bold"
+                              />
+                            </div>
+                          </div>
+                          <NiceTimeInput 
+                            label="STD from CGP"
+                            value={outboundCgpStd}
+                            onChange={setOutboundCgpStd}
+                            className="h-7"
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
-          <DialogFooter>
-            <Button onClick={handleManualAdd} className="w-full text-xs font-black uppercase tracking-widest glow-cyan h-10">Commit {isReturnLegEnabled ? 'Paired Leg' : 'Sector'}</Button>
-          </DialogFooter>
+          <div className="px-6 py-4 bg-primary/5 border-t border-primary/10 flex items-center gap-3">
+            <Button variant="ghost" onClick={handleManualEntryClose} className="flex-1 text-[11px] font-black uppercase tracking-widest h-10 ring-1 ring-border">Cancel</Button>
+            <Button onClick={handleManualAdd} className="flex-[2] text-[11px] font-black uppercase tracking-widest h-10 bg-primary hover:bg-primary/90 glow-cyan">Commit Rotation</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
