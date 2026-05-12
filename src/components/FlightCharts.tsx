@@ -84,7 +84,7 @@ const FlightCharts = ({ data }: Props) => {
               <p className="text-xs text-foreground/40 font-black mt-1 uppercase tracking-widest">Operational flight frequency per route</p>
             </div>
           </div>
-          <div className="glass-card p-6 rounded-2xl border border-border h-[380px]">
+          <div className="glass-card p-6 rounded-2xl border border-black h-[380px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={sectorData} layout="vertical" margin={{ left: 20, right: 30 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="currentColor" opacity={0.1} />
@@ -92,7 +92,7 @@ const FlightCharts = ({ data }: Props) => {
                 <YAxis dataKey="sector" type="category" tick={{ fontSize: 10, fontWeight: 900, fill: 'currentColor', opacity: 0.6 }} axisLine={false} tickLine={false} width={80} />
                 <Tooltip 
                   cursor={{ fill: 'currentColor', opacity: 0.05 }}
-                  contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '12px', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+                  contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '12px', border: '1px solid black', color: 'var(--foreground)' }}
                 />
                 <Bar dataKey="flights" fill="var(--primary)" radius={[0, 4, 4, 0]} barSize={16}>
                    {sectorData.map((_, i) => (
@@ -115,7 +115,7 @@ const FlightCharts = ({ data }: Props) => {
               <p className="text-xs text-foreground/40 font-black mt-1 uppercase tracking-widest">Aircraft platform utilization architecture</p>
             </div>
           </div>
-          <div className="glass-card p-6 rounded-2xl border border-border h-[380px]">
+          <div className="glass-card p-6 rounded-2xl border border-black h-[380px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={typeData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.1} />
@@ -123,7 +123,7 @@ const FlightCharts = ({ data }: Props) => {
                 <YAxis tick={{ fontSize: 10, fill: 'currentColor', opacity: 0.6, fontWeight: 900 }} axisLine={false} tickLine={false} />
                 <Tooltip 
                   cursor={{ fill: 'currentColor', opacity: 0.05 }}
-                  contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '12px', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+                  contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '12px', border: '1px solid black', color: 'var(--foreground)' }}
                   formatter={(v: number) => [v, 'Sorties']} 
                 />
                 <Bar dataKey="value" fill="var(--secondary)" radius={[4, 4, 0, 0]} barSize={24}>
@@ -146,7 +146,7 @@ const FlightCharts = ({ data }: Props) => {
           </h3>
           <p className="text-xs text-foreground/40 font-black mt-1 uppercase tracking-widest">24-hour synchronized aircraft rotation lifecycle</p>
         </div>
-        <div className="glass-card p-6 rounded-2xl border border-border overflow-x-auto">
+        <div className="glass-card p-6 rounded-2xl border border-black overflow-x-auto">
           <div className="min-w-[900px]">
             <ResponsiveContainer width="100%" height={Math.max(400, timelineData.length * 50)}>
               <BarChart 
@@ -178,8 +178,8 @@ const FlightCharts = ({ data }: Props) => {
                     if (active && payload && payload.length) {
                       const d = payload[0].payload;
                       return (
-                        <div className="glass-card bg-card/95 text-foreground p-4 rounded-xl border border-border shadow-2xl text-xs space-y-3 min-w-[200px]">
-                          <div className="flex justify-between items-center border-b border-border pb-2">
+                        <div className="glass-card bg-card/95 text-foreground p-4 rounded-xl border border-black shadow-2xl text-xs space-y-3 min-w-[200px]">
+                          <div className="flex justify-between items-center border-b border-black pb-2">
                             <span className="font-black text-sm text-primary">{d.flightNo}</span>
                             <span className="px-2 py-0.5 bg-foreground/5 rounded text-foreground/60 font-bold tracking-widest">{d.reg}</span>
                           </div>

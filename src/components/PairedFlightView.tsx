@@ -207,10 +207,26 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
 
   const handleDownloadExcel = () => {
     const data = [];
-    if (dateLabel) data.push([dateLabel]);
-    data.push([]);
-    data.push(['DOMESTIC', '', '', '', '', '', '', '', 'INTERNATIONAL']);
+    const merges = [];
+
+    // Date Label
+    if (dateLabel) {
+      data.push([`DATE: ${dateLabel.toUpperCase()}`]);
+      merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 14 } });
+      data.push([]); // Empty row for padding
+    }
+
+    const startRow = data.length;
+
+    // Section Titles
+    data.push(['DOMESTIC OPERATIONS', '', '', '', '', '', '', '', 'INTERNATIONAL OPERATIONS']);
+    merges.push({ s: { r: startRow, c: 0 }, e: { r: startRow, c: 6 } });
+    merges.push({ s: { r: startRow, c: 8 }, e: { r: startRow, c: 14 } });
+
+    // Table Headers
     data.push([...headers, '', ...headers]);
+
+    const dataStartRow = data.length;
 
     for (let i = 0; i < maxRows; i++) {
       const d = domesticRows[i];
@@ -218,14 +234,40 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
 
       const dCols = d?.row ? [d.sn || '', d.row.reg, d.row.flightNo, `${d.row.from}-${d.row.to}`, d.row.std, d.row.eta, d.row.pax] : ['', '', '', '', '', '', ''];
       const iCols = intl?.row ? [intl.sn || '', intl.row.reg, intl.row.flightNo, `${intl.row.from}-${intl.row.to}`, intl.row.std, intl.row.eta, intl.row.pax] : ['', '', '', '', '', '', ''];
+      
       data.push([...dCols, '', ...iCols]);
+
+      // Domestic Merges (SN and REG are often common for a flight pair)
+      if (d && d.isFirstInPair && d.pairLength > 1) {
+        const rowRange = d.pairLength - 1;
+        merges.push({ s: { r: dataStartRow + i, c: 0 }, e: { r: dataStartRow + i + rowRange, c: 0 } }); // SN merge
+        merges.push({ s: { r: dataStartRow + i, c: 1 }, e: { r: dataStartRow + i + rowRange, c: 1 } }); // REG merge
+      }
+
+      // International Merges
+      if (intl && intl.isFirstInPair && intl.pairLength > 1) {
+        const rowRange = intl.pairLength - 1;
+        merges.push({ s: { r: dataStartRow + i, c: 8 }, e: { r: dataStartRow + i + rowRange, c: 8 } }); // SN merge
+        merges.push({ s: { r: dataStartRow + i, c: 9 }, e: { r: dataStartRow + i + rowRange, c: 9 } }); // REG merge
+      }
     }
 
     const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!merges'] = merges;
+    
+    // Professional column widths
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 10 }, { wch: 10 }, { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 6 }, // Domestic
+      { wch: 4 }, // Gap
+      { wch: 5 }, { wch: 10 }, { wch: 10 }, { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 6 }  // International
+    ];
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Flight Split');
-    XLSX.writeFile(wb, `flight_split_${format(new Date(), 'yyyyMMdd')}.xlsx`);
-    toast.success('Excel downloaded');
+    XLSX.utils.book_append_sheet(wb, ws, 'Flight Matrix');
+    
+    const fileName = `Flight_Matrix_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast.success('Matrix Excel Exported');
   };
 
   const handleSaveImage = async () => {
@@ -286,95 +328,110 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-4 justify-center py-2">
         {onAddFlight && (
-          <Button onClick={onAddFlight} variant="outline" size="sm" className="gap-2 h-10 text-xs font-black uppercase tracking-widest border-primary/30 text-primary hover:bg-primary/5 transition-all px-5">
-            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add Manual Leg</span><span className="sm:hidden">Add</span>
+          <Button onClick={onAddFlight} variant="outline" size="sm" className="gap-2 h-12 text-[10px] font-black uppercase tracking-widest border-2 border-primary/30 text-primary hover:bg-primary/5 transition-all px-6 shadow-sm">
+            <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Add Manual Leg</span><span className="sm:hidden">Add</span>
           </Button>
         )}
-        <Button onClick={handleCopyTable} variant="outline" size="sm" className="gap-2 h-10 text-xs font-black uppercase tracking-widest border-border hover:bg-foreground/5 transition-all px-5 text-muted-foreground hover:text-foreground">
-          <Copy className="w-4 h-4 text-primary" /> <span className="hidden sm:inline">Copy Telemetry</span><span className="sm:hidden">Copy</span>
+        <Button onClick={handleCopyTable} variant="outline" size="sm" className="gap-2 h-12 text-[10px] font-black uppercase tracking-widest border-2 border-black hover:bg-foreground/5 transition-all px-6 text-muted-foreground hover:text-foreground shadow-sm">
+          <Copy className="w-5 h-5 text-primary" /> <span className="hidden sm:inline">Copy Telemetry</span><span className="sm:hidden">Copy</span>
         </Button>
-        <Button onClick={handleDownloadExcel} variant="outline" size="sm" className="gap-2 h-10 text-xs font-black uppercase tracking-widest border-border hover:bg-foreground/5 transition-all px-5 text-muted-foreground hover:text-foreground">
-          <FileSpreadsheet className="w-4 h-4 text-secondary" /> <span className="hidden sm:inline">Export XLSX</span><span className="sm:hidden">Excel</span>
+        <Button onClick={handleDownloadExcel} variant="outline" size="sm" className="gap-2 h-12 text-[10px] font-black uppercase tracking-widest border-2 border-black hover:bg-foreground/5 transition-all px-6 text-muted-foreground hover:text-foreground shadow-sm">
+          <FileSpreadsheet className="w-5 h-5 text-secondary" /> <span className="hidden sm:inline">Export XLSX</span><span className="sm:hidden">Excel</span>
         </Button>
-        <Button onClick={handleSaveImage} variant="outline" size="sm" className="gap-2 h-10 text-xs font-black uppercase tracking-widest border-border hover:bg-foreground/5 transition-all px-5 text-muted-foreground hover:text-foreground">
-          <Image className="w-4 h-4 text-primary" /> <span className="hidden sm:inline">Snapshot PNG</span><span className="sm:hidden">Image</span>
+        <Button onClick={handleSaveImage} variant="outline" size="sm" className="gap-2 h-12 text-[10px] font-black uppercase tracking-widest border-2 border-black hover:bg-foreground/5 transition-all px-6 text-muted-foreground hover:text-foreground shadow-sm">
+          <Image className="w-5 h-5 text-primary" /> <span className="hidden sm:inline">Snapshot PNG</span><span className="sm:hidden">Image</span>
         </Button>
       </div>
 
-      <div ref={containerRef} className="space-y-6 p-1">
-        {dateLabel && (
-          <div className="text-center py-6 bg-foreground/5 border-2 border-border rounded-2xl glass-card relative overflow-hidden group mb-4">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5 opacity-50"></div>
-            <div className="relative text-2xl font-black uppercase tracking-[0.4em] text-foreground transition-all duration-300 group-hover:tracking-[0.5em]">
-              {dateLabel}
-            </div>
-          </div>
-        )}
+      <div ref={containerRef} className="space-y-8 p-1">
 
         <div className="overflow-x-auto pb-2 custom-scrollbar">
-          <div className="min-w-[1100px] grid grid-cols-2 gap-8 relative">
-            <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-border block" />
+          <div className="min-w-[1200px] flex flex-col gap-6 relative">
+            {dateLabel && (
+              <div className="w-full relative group">
+                <div className="py-6 flex items-center justify-center glass-card border-b-4 border-2 border-black rounded-2xl overflow-hidden bg-foreground/5">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-transparent to-secondary/20 opacity-50"></div>
+                  <div className="font-black text-4xl uppercase tracking-[0.8em] text-black whitespace-nowrap relative z-10 drop-shadow-sm">
+                    {dateLabel}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-8 relative">
+              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-black block" />
             
             {/* Domestic Table - Left Side */}
             <div className="flex flex-col gap-4">
-            <div className="glass-card rounded-2xl border-2 border-border overflow-hidden flex flex-col group h-full">
-              <div className="bg-primary/10 border-b-2 border-border text-foreground text-center py-4 text-sm font-black uppercase tracking-[0.3em]">
+            <div className="glass-card rounded-2xl border-2 border-black overflow-hidden flex flex-col group h-full">
+              <div className="bg-primary/10 border-b-2 border-black text-black text-center py-6 text-lg font-black uppercase tracking-[0.5em] shadow-inner">
                 Domestic
               </div>
               <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-sm border-collapse min-w-[500px]">
+                <table className="w-full text-base border-collapse min-w-[500px]">
                   <thead>
-                    <tr className="bg-foreground/5 text-foreground/60 border-b-2 border-border">
-                      {headers.map(h => <th key={`d-h-${h}`} className="px-3 py-4 border-r-2 border-border text-center text-sm font-black uppercase tracking-wider">{h}</th>)}
-                      {onDelete && <th className="px-1 py-1 border-border text-center text-[8px] font-black uppercase tracking-widest w-8"></th>}
+                    <tr className="bg-foreground/5 text-black border-b-2 border-black">
+                      {headers.map(h => <th key={`d-h-${h}`} className="px-3 py-4 border-r-2 border-black text-center text-base font-black uppercase tracking-wider">{h}</th>)}
+                      {onDelete && <th className="px-1 py-1 border-black text-center text-[10px] font-black uppercase tracking-widest w-8"></th>}
                     </tr>
                   </thead>
-                  <tbody className="font-mono text-foreground/80">
+                  <tbody className="font-mono text-black">
                     {domesticRows.map((d, i) => (
                       <tr 
                         key={`d-row-${i}`} 
                         className={cn(
-                          "border-b-2 border-border last:border-0 hover:bg-foreground/5 transition-colors group/row",
+                          "border-b-2 border-black last:border-0 hover:bg-foreground/5 transition-colors group/row",
                           d.pairIndex % 2 === 0 ? "bg-sky-50/50" : "bg-background"
                         )}
                       >
                         {d.isFirstInPair && (
                           <td rowSpan={d.pairLength} className={cn(
-                            "px-3 py-4 font-black text-center w-10 border-r-2 border-border text-sm text-primary transition-colors group-hover/row:text-foreground",
+                            "px-3 py-4 font-black text-center w-10 border-r-2 border-black text-base text-black transition-colors group-hover/row:text-black",
                             d.pairIndex % 2 === 0 ? "bg-sky-100/50" : "bg-foreground/5"
                           )}>
                             {d.sn}
                           </td>
                         )}
                         {d.isFirstInPair && (
-                          <td rowSpan={d.pairLength} className="px-3 py-4 border-r-2 border-border text-center bg-foreground/2">
-                            {d.row && d.sn ? (
+                          <td rowSpan={d.pairLength} className="px-3 py-4 border-r-2 border-black text-center bg-foreground/2">
+                            {isEditMode && d.row && d.sn ? (
                                <input
                                 type="text"
                                 value={d.row.reg}
                                 onChange={(e) => onUpdateReg(d.row!.flightNo, 0, e.target.value.toUpperCase())}
-                                className="w-16 bg-background/60 border-2 border-border focus:outline-none focus:border-primary rounded-md text-center text-lg py-1.5 text-foreground font-black"
+                                className="w-16 bg-background/60 border-2 border-black focus:outline-none focus:border-primary rounded-md text-center text-lg py-1.5 text-black font-black"
                               />
                             ) : (
-                              <div className="text-center text-lg font-black text-foreground">{d.row?.reg || ''}</div>
+                              <div className="text-center text-lg font-black text-black">{d.row?.reg || ''}</div>
                             )}
                           </td>
                         )}
-                        <td className="px-3 py-4 font-black text-center text-base border-r-2 border-border text-foreground">{d.row?.flightNo || ''}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-center border-r-2 border-border uppercase">
-                          {d.row ? (
-                            <div className="flex flex-col">
-                              <span className="text-base font-black text-foreground">{d.row.from}-{d.row.to}</span>
-                            </div>
-                          ) : ''}
-                        </td>
-                        <td className="px-3 py-4 text-center text-base text-foreground font-black border-r-2 border-border">
+                        <td className="px-3 py-4 font-black text-center text-lg border-r-2 border-black text-black">
                           {isEditMode && d.row ? (
                             <input
                               type="text"
-                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              className="w-24 bg-background/50 border border-black/50 rounded px-1 text-center focus:outline-none focus:border-primary text-lg"
+                              value={d.row.flightNo}
+                              onChange={(e) => onUpdateFlight?.(d.row!.flightNo, d.row!.from, d.row!.to, 'flightNo', e.target.value)}
+                            />
+                          ) : (
+                            d.row?.flightNo || ''
+                          )}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-center border-r-2 border-black uppercase">
+                          {d.row ? (
+                            <div className="flex flex-col">
+                              <span className="text-lg font-black text-black">{d.row.from}-{d.row.to}</span>
+                            </div>
+                          ) : ''}
+                        </td>
+                        <td className="px-3 py-4 text-center text-lg text-black font-black border-r-2 border-black">
+                          {isEditMode && d.row ? (
+                            <input
+                              type="text"
+                              className="w-16 bg-background/50 border border-black/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary text-base"
                               value={d.row.std}
                               onChange={(e) => onUpdateFlight?.(d.row!.flightNo, d.row!.from, d.row!.to, 'std', e.target.value)}
                             />
@@ -382,11 +439,11 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                             d.row?.std || ''
                           )}
                         </td>
-                        <td className="px-3 py-4 text-center text-lg font-black border-r-2 border-border text-foreground">
+                        <td className="px-3 py-4 text-center text-xl font-black border-r-2 border-black text-black">
                           {isEditMode && d.row ? (
                             <input
                               type="text"
-                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              className="w-16 bg-background/50 border border-black/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary text-lg"
                               value={d.row.eta}
                               onChange={(e) => onUpdateFlight?.(d.row!.flightNo, d.row!.from, d.row!.to, 'eta', e.target.value)}
                             />
@@ -395,13 +452,13 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                           )}
                         </td>
                         <td className={cn(
-                          "px-3 py-4 font-black text-center text-lg border-r-2 border-border",
-                          d.row && d.row.pax < 60 ? 'text-shadow-neon text-rose-500' : 'text-foreground/80'
+                          "px-3 py-4 font-black text-center text-xl border-r-2 border-black",
+                          d.row && d.row.pax < 60 ? 'text-shadow-neon text-rose-500' : 'text-black'
                         )}>
                           {isEditMode && d.row ? (
                             <input
                               type="number"
-                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              className="w-16 bg-background/50 border border-black/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary text-lg"
                               value={d.row.pax}
                               onChange={(e) => onUpdateFlight?.(d.row!.flightNo, d.row!.from, d.row!.to, 'pax', parseInt(e.target.value) || 0)}
                             />
@@ -434,62 +491,73 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
 
           {/* International Table - Right Side */}
           <div className="flex flex-col gap-4">
-            <div className="glass-card rounded-2xl border-2 border-border overflow-hidden flex flex-col group h-full">
-              <div className="bg-secondary/10 border-b-2 border-border text-foreground text-center py-4 text-sm font-black uppercase tracking-[0.3em]">
+                          <div className="glass-card rounded-2xl border-2 border-black overflow-hidden flex flex-col group h-full">
+              <div className="bg-secondary/10 border-b-2 border-black text-black text-center py-6 text-lg font-black uppercase tracking-[0.5em] shadow-inner">
                 International
               </div>
               <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-sm border-collapse min-w-[500px]">
+                <table className="w-full text-base border-collapse min-w-[500px]">
                   <thead>
-                    <tr className="bg-foreground/5 text-foreground/60 border-b-2 border-border">
-                      {headers.map(h => <th key={`i-h-${h}`} className="px-3 py-4 border-r-2 border-border text-center text-sm font-black uppercase tracking-wider">{h}</th>)}
-                      {onDelete && <th className="px-1 py-1 border-border text-center text-[8px] font-black uppercase tracking-widest w-8"></th>}
+                    <tr className="bg-foreground/5 text-black border-b-2 border-black">
+                      {headers.map(h => <th key={`i-h-${h}`} className="px-3 py-4 border-r-2 border-black text-center text-base font-black uppercase tracking-wider">{h}</th>)}
+                      {onDelete && <th className="px-1 py-1 border-black text-center text-[10px] font-black uppercase tracking-widest w-8"></th>}
                     </tr>
                   </thead>
-                  <tbody className="font-mono text-foreground/80">
+                  <tbody className="font-mono text-black">
                     {intlRows.map((intl, i) => (
                       <tr 
                         key={`i-row-${i}`} 
                         className={cn(
-                          "border-b-2 border-border last:border-0 hover:bg-foreground/5 transition-colors group/row",
+                          "border-b-2 border-black last:border-0 hover:bg-foreground/5 transition-colors group/row",
                           intl.pairIndex % 2 === 0 ? "bg-emerald-50/50" : "bg-background"
                         )}
                       >
                         {intl.isFirstInPair && (
                           <td rowSpan={intl.pairLength} className={cn(
-                            "px-3 py-4 font-black text-center w-10 border-r-2 border-border text-sm text-secondary transition-colors group-hover/row:text-foreground",
+                            "px-3 py-4 font-black text-center w-10 border-r-2 border-black text-base text-black transition-colors group-hover/row:text-black",
                             intl.pairIndex % 2 === 0 ? "bg-emerald-100/50" : "bg-foreground/5"
                           )}>
                             {intl.sn}
                           </td>
                         )}
                         {intl.isFirstInPair && (
-                          <td rowSpan={intl.pairLength} className="px-3 py-4 border-r-2 border-border text-center bg-foreground/2">
-                            {intl.row && intl.sn ? (
+                          <td rowSpan={intl.pairLength} className="px-3 py-4 border-r-2 border-black text-center bg-foreground/2">
+                            {isEditMode && intl.row && intl.sn ? (
                               <input
                                 type="text"
                                 value={intl.row.reg}
                                 onChange={(e) => onUpdateReg(intl.row!.flightNo, 0, e.target.value.toUpperCase())}
-                                className="w-16 bg-background/60 border-2 border-border focus:outline-none focus:border-secondary rounded-md text-center text-lg py-1.5 text-foreground font-black"
+                                className="w-16 bg-background/60 border-2 border-black focus:outline-none focus:border-secondary rounded-md text-center text-lg py-1.5 text-black font-black"
                               />
                             ) : (
-                              <div className="text-center text-lg font-black text-foreground">{intl.row?.reg || ''}</div>
+                              <div className="text-center text-lg font-black text-black">{intl.row?.reg || ''}</div>
                             )}
                           </td>
                         )}
-                        <td className="px-3 py-4 font-black text-center text-base border-r-2 border-border text-foreground">{intl.row?.flightNo || ''}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-center border-r-2 border-border uppercase">
-                          {intl.row ? (
-                            <div className="flex flex-col">
-                              <span className="text-base font-black text-foreground">{intl.row.from}-{intl.row.to}</span>
-                            </div>
-                          ) : ''}
-                        </td>
-                        <td className="px-3 py-4 text-center text-base text-foreground font-black border-r-2 border-border">
+                        <td className="px-3 py-4 font-black text-center text-lg border-r-2 border-black text-black">
                           {isEditMode && intl.row ? (
                             <input
                               type="text"
-                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              className="w-24 bg-background/50 border border-black/50 rounded px-1 text-center focus:outline-none focus:border-secondary text-lg"
+                              value={intl.row.flightNo}
+                              onChange={(e) => onUpdateFlight?.(intl.row!.flightNo, intl.row!.from, intl.row!.to, 'flightNo', e.target.value)}
+                            />
+                          ) : (
+                            intl.row?.flightNo || ''
+                          )}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-center border-r-2 border-black uppercase">
+                          {intl.row ? (
+                            <div className="flex flex-col">
+                              <span className="text-lg font-black text-black">{intl.row.from}-{intl.row.to}</span>
+                            </div>
+                          ) : ''}
+                        </td>
+                        <td className="px-3 py-4 text-center text-lg text-black font-black border-r-2 border-black">
+                          {isEditMode && intl.row ? (
+                            <input
+                              type="text"
+                              className="w-16 bg-background/50 border border-black/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary text-base"
                               value={intl.row.std}
                               onChange={(e) => onUpdateFlight?.(intl.row!.flightNo, intl.row!.from, intl.row!.to, 'std', e.target.value)}
                             />
@@ -497,11 +565,11 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                             intl.row?.std || ''
                           )}
                         </td>
-                        <td className="px-3 py-4 text-center text-lg font-black border-r-2 border-border text-foreground">
+                        <td className="px-3 py-4 text-center text-xl font-black border-r-2 border-black text-black">
                           {isEditMode && intl.row ? (
                             <input
                               type="text"
-                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              className="w-16 bg-background/50 border border-black/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary text-lg"
                               value={intl.row.eta}
                               onChange={(e) => onUpdateFlight?.(intl.row!.flightNo, intl.row!.from, intl.row!.to, 'eta', e.target.value)}
                             />
@@ -510,13 +578,13 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
                           )}
                         </td>
                         <td className={cn(
-                          "px-3 py-4 font-black text-center text-lg border-r-2 border-border",
-                          intl.row && intl.row.pax < 60 ? 'text-shadow-neon text-rose-500' : 'text-foreground/80'
+                          "px-3 py-4 font-black text-center text-xl border-r-2 border-black",
+                          intl.row && intl.row.pax < 60 ? 'text-shadow-neon text-rose-500' : 'text-black'
                         )}>
                           {isEditMode && intl.row ? (
                             <input
                               type="number"
-                              className="w-16 bg-background/50 border border-border/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary"
+                              className="w-16 bg-background/50 border border-black/50 rounded px-1 text-center font-mono focus:outline-none focus:border-primary text-lg"
                               value={intl.row.pax}
                               onChange={(e) => onUpdateFlight?.(intl.row!.flightNo, intl.row!.from, intl.row!.to, 'pax', parseInt(e.target.value) || 0)}
                             />
@@ -549,6 +617,7 @@ const PairedFlightView = ({ domestic, international, onUpdateReg, onUpdateFlight
       </div>
     </div>
   </div>
+</div>
 );
 };
 

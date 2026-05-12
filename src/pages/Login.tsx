@@ -54,7 +54,7 @@ const Login = ({ onLogin }: LoginProps) => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <Card className="border-border/50 bg-card/50 backdrop-blur-xl shadow-2xl">
+        <Card className="border-black bg-card/50 backdrop-blur-xl shadow-2xl">
           <CardHeader className="space-y-1 items-center pb-8 text-center">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
               <Lock className="w-6 h-6 text-primary" />
@@ -80,7 +80,7 @@ const Login = ({ onLogin }: LoginProps) => {
                       setPassword(e.target.value);
                       setError(false);
                     }}
-                    className={`h-12 bg-background/50 border-border text-center font-bold tracking-widest transition-all duration-300 pr-10 ${
+                    className={`h-12 bg-background/50 border-black text-center font-bold tracking-widest transition-all duration-300 pr-10 ${
                       error ? 'border-destructive ring-destructive/20' : 'focus:ring-primary/20'
                     }`}
                     autoFocus

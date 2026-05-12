@@ -141,7 +141,7 @@ const AircraftMarker = React.memo(({
         className: 'custom-plane-icon',
         html: `
           <div class="relative group">
-            <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-background/95 text-[8px] font-black text-foreground px-2 py-1 rounded border border-border whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:-translate-y-1 shadow-2xl z-50 pointer-events-none">
+            <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-background/95 text-[8px] font-black text-foreground px-2 py-1 rounded border border-black whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:-translate-y-1 shadow-2xl z-50 pointer-events-none">
               <div class="text-primary mb-0.5 tracking-tighter">${flight.flightNo}</div>
               <div class="text-[7px] text-foreground/50 tracking-widest uppercase">${flight.from} &rarr; ${flight.to}</div>
             </div>
@@ -292,7 +292,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[700px]">
-      <div className="lg:col-span-3 relative rounded-2xl overflow-hidden border border-border shadow-2xl glass-card">
+      <div className="lg:col-span-3 relative rounded-2xl overflow-hidden border border-black shadow-2xl glass-card">
         <MapContainer 
           center={mapCenter} 
           zoom={6} 
@@ -330,7 +330,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                     className={cn(
                       "text-[9px] font-mono px-2 py-1 rounded bg-background/80 border-l-2 backdrop-blur-sm shadow-xl",
                       log.type === 'success' ? "border-primary text-primary" : 
-                      log.type === 'warn' ? "border-amber-500 text-amber-500" : "border-border text-foreground/60"
+                      log.type === 'warn' ? "border-amber-500 text-amber-500" : "border-black text-foreground/60"
                     )}
                   >
                     <span className="opacity-40 mr-1">[{new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
@@ -489,7 +489,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
             )}
           </AnimatePresence>
 
-          <div className="glass-card bg-background/80 backdrop-blur-xl border border-border rounded-2xl p-4 shadow-2xl space-y-4">
+          <div className="glass-card bg-background/80 backdrop-blur-xl border border-black rounded-2xl p-4 shadow-2xl space-y-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <div className={cn(
@@ -517,7 +517,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                   size="sm" 
                   variant="ghost" 
                   className={cn(
-                    "h-8 px-2 text-[10px] font-black border border-border",
+                    "h-8 px-2 text-[10px] font-black border border-black",
                     isLiveMode ? "bg-rose-500/20 text-rose-500 border-rose-500/40" : "text-muted-foreground hover:bg-foreground/5"
                   )}
                   onClick={() => setIsLiveMode(!isLiveMode)}
@@ -525,7 +525,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                   LIVE
                 </Button>
                 
-                <div className="h-6 w-px bg-border mx-1" />
+                <div className="h-6 w-px bg-black mx-1" />
 
                 <div className="flex items-center gap-1">
                   <Button 
@@ -577,7 +577,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "h-7 text-[8px] font-black tracking-widest border border-border",
+                  "h-7 text-[8px] font-black tracking-widest border border-black",
                   showAllPaths ? "bg-primary/20 text-primary" : "text-muted-foreground/40"
                 )}
                 onClick={() => setShowAllPaths(!showAllPaths)}
@@ -602,13 +602,13 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
       </div>
 
       <div className="lg:col-span-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-        <h3 className="text-sm font-black uppercase tracking-widest text-foreground/60 px-2 py-1 border-b border-border mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-black uppercase tracking-widest text-foreground/60 px-2 py-1 border-b border-black mb-4 flex items-center justify-between">
           Live Traffic Matrix
           {isFetching && <RefreshCw className="w-3 h-3 text-primary animate-spin" />}
         </h3>
         
         {localFlights.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center glass-card rounded-xl border border-dashed border-border text-foreground">
+          <div className="flex flex-col items-center justify-center p-8 text-center glass-card rounded-xl border border-dashed border-black text-foreground">
             <div className="text-muted-foreground text-xs uppercase font-bold tracking-widest">No Traffic Data</div>
           </div>
         ) : (
@@ -624,7 +624,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                 <Card 
                   key={`${flight.flightNo}-${idx}`}
                   className={cn(
-                    "cursor-pointer transition-all border-border/50 overflow-hidden group relative",
+                    "cursor-pointer transition-all border-black/50 overflow-hidden group relative",
                     isSelected ? 'ring-2 ring-primary border-primary bg-primary/5 shadow-[0_0_15px_rgba(0,243,255,0.1)]' : 'glass-card hover:border-primary/30',
                   )}
                   onClick={() => setSelectedFlight(flight)}
@@ -643,7 +643,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                         <div className="text-lg font-black">{flight.from}</div>
                         <div className="text-[9px] uppercase text-muted-foreground font-bold">{flight.std}</div>
                       </div>
-                      <div className="flex-1 border-b border-dashed border-border relative">
+                      <div className="flex-1 border-b border-dashed border-black relative">
                         <Plane className={cn(
                           "w-3 h-3 absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 transition-colors",
                           isSelected ? 'text-primary' : 'text-muted-foreground/30 group-hover:text-primary/50'
@@ -655,7 +655,7 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-border/20">
+                    <div className="flex items-center justify-between pt-2 border-t border-black/20">
                       <div className="flex items-center gap-1.5">
                         <div className="w-1.5 h-1.5 rounded-full bg-secondary"></div>
                         <span className="text-[10px] font-black">{flight.reg}</span>
@@ -679,17 +679,17 @@ const FlightMap: React.FC<FlightMapProps> = ({ flights }) => {
         .custom-popup .leaflet-popup-content-wrapper {
           background: var(--background);
           color: var(--foreground);
-          border: 1px solid var(--border);
+          border: 1px solid black;
           border-radius: 8px;
         }
         .custom-popup .leaflet-popup-tip {
           background: var(--background);
-          border: 1px solid var(--border);
+          border: 1px solid black;
         }
         .leaflet-bar a {
           background-color: var(--background) !important;
           color: var(--foreground) !important;
-          border-bottom: 1px solid var(--border) !important;
+          border-bottom: 1px solid black !important;
         }
         .leaflet-bar a:hover {
           background-color: var(--muted) !important;

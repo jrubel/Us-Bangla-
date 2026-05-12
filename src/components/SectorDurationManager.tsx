@@ -120,7 +120,7 @@ const SectorDurationManager = ({ onUpdate }: Props) => {
   };
 
   return (
-    <div className="space-y-6 glass-card rounded-2xl border border-border p-6 group">
+    <div className="space-y-6 glass-card rounded-2xl border border-black p-6 group">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
@@ -189,7 +189,7 @@ const SectorDurationManager = ({ onUpdate }: Props) => {
           const isOverridden = key in overrides || key in nameOverrides;
           const defaultVal = defaults[key];
           return (
-            <div key={key} className="flex flex-col gap-2 p-3 bg-foreground/5 rounded-xl border border-border hover:bg-foreground/10 transition-all group/item">
+            <div key={key} className="flex flex-col gap-2 p-3 bg-foreground/5 rounded-xl border border-black hover:bg-foreground/10 transition-all group/item">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black text-foreground/50 group-hover/item:text-primary transition-colors tracking-[0.2em]">{key}</span>
                 <div className="flex items-center gap-2">
@@ -210,7 +210,7 @@ const SectorDurationManager = ({ onUpdate }: Props) => {
                   <Input
                     value={editNames[key] ?? ''}
                     onChange={e => setEditNames(prev => ({ ...prev, [key]: e.target.value }))}
-                    className="h-10 text-xs font-bold bg-background/50 border-border text-foreground focus:border-primary uppercase tracking-wider"
+                    className="h-10 text-xs font-bold bg-background/50 border-black text-foreground focus:border-primary uppercase tracking-wider"
                     placeholder="Sector Name"
                   />
                 </div>
@@ -220,7 +220,7 @@ const SectorDurationManager = ({ onUpdate }: Props) => {
                     <Input
                       value={editValues[key] ?? ''}
                       onChange={e => setEditValues(prev => ({ ...prev, [key]: e.target.value }))}
-                      className="h-10 text-xs font-black bg-background/50 border-border text-foreground text-center focus:border-primary font-mono flex-1"
+                      className="h-10 text-xs font-black bg-background/50 border-black text-foreground text-center focus:border-primary font-mono flex-1"
                     />
                   </div>
                 </div>

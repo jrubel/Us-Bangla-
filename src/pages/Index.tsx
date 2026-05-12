@@ -167,7 +167,7 @@ const NiceTimeInput = ({
     <div className={cn("space-y-1", className)}>
       <Label className="text-[9px] uppercase font-black text-primary/70 ml-1">{label}</Label>
       <div className={cn(
-        "flex items-center gap-1 p-1 bg-foreground/5 rounded-lg border border-border/50 transition-colors", 
+        "flex items-center gap-1 p-1 bg-foreground/5 rounded-lg border border-black/50 transition-colors", 
         error && "border-destructive ring-1 ring-destructive"
       )}>
         <Input 
@@ -179,7 +179,7 @@ const NiceTimeInput = ({
           maxLength={5}
         />
         
-        <div className="flex items-center gap-0.5 border-l border-border/30 pl-1">
+        <div className="flex items-center gap-0.5 border-l border-black/30 pl-1">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -203,7 +203,7 @@ const NiceTimeInput = ({
                 <Clock className="h-3 w-3" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[180px] p-2 bg-background border-border shadow-2xl z-[150]" align="end">
+            <PopoverContent className="w-[180px] p-2 bg-background border-black shadow-2xl z-[150]" align="end">
               <Tabs value={pickerMode} onValueChange={(v) => setPickerMode(v as 'shortcuts' | 'clock')} className="w-full">
                 <TabsList className="grid grid-cols-2 h-7 bg-muted/50 mb-2">
                   <TabsTrigger value="clock" className="text-[8px] font-black uppercase">Clock</TabsTrigger>
@@ -919,7 +919,7 @@ const Index = () => {
     toast.success('Flight removed');
   };
   
-  const handleUpdateFlight = (flightNo: string, from: string, to: string, field: 'std' | 'eta' | 'pax', value: string | number) => {
+  const handleUpdateFlight = (flightNo: string, from: string, to: string, field: keyof FlightRow, value: string | number) => {
     setData(prev => {
       const updated = prev.map(row => 
         (row.flightNo === flightNo && row.from === from && row.to === to) 
@@ -989,7 +989,7 @@ const Index = () => {
         </nav>
       </div>
 
-      <div className="mt-auto p-6 border-t border-border bg-foreground/5">
+      <div className="mt-auto p-6 border-t border-black bg-foreground/5">
         <div className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -1002,12 +1002,12 @@ const Index = () => {
               value={input}
               onChange={e => handleInputChange(e.target.value)}
               placeholder="Paste roster data here..."
-              className="h-32 text-sm bg-background/50 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary/30 rounded-xl font-mono"
+              className="h-32 text-sm bg-background/50 border-black text-foreground placeholder:text-muted-foreground focus-visible:ring-primary/30 rounded-xl font-mono"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Button onClick={handleGenerate} size="sm" className="w-full h-10 text-xs font-bold uppercase tracking-wider glow-cyan">Process</Button>
-            <Button onClick={handleClear} variant="outline" size="sm" className="w-full h-10 text-xs font-bold uppercase tracking-wider border-border text-muted-foreground hover:bg-foreground/5">Reset</Button>
+            <Button onClick={handleClear} variant="outline" size="sm" className="w-full h-10 text-xs font-bold uppercase tracking-wider border-black text-muted-foreground hover:bg-foreground/5">Reset</Button>
           </div>
 
           <Button 
@@ -1026,7 +1026,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex selection:bg-primary/30 transition-colors duration-300">
       {/* Sidebar for Desktop */}
-      <aside className="hidden lg:flex w-64 border-r border-border bg-[var(--sidebar-bg)] flex-col shrink-0">
+      <aside className="hidden lg:flex w-64 border-r border-black bg-[var(--sidebar-bg)] flex-col shrink-0">
         <SidebarContent />
       </aside>
 
@@ -1037,7 +1037,7 @@ const Index = () => {
           (theme === 'minimal-dark' || theme === 'classic') && "hidden"
         )}></div>
         
-        <header className="h-16 border-b border-border bg-[var(--header-bg)] backdrop-blur-md flex items-center justify-between px-4 sm:px-8 shrink-0 z-10 transition-colors duration-300">
+        <header className="h-16 border-b border-black bg-[var(--header-bg)] backdrop-blur-md flex items-center justify-between px-4 sm:px-8 shrink-0 z-10 transition-colors duration-300">
           <div className="flex items-center gap-2 sm:gap-4 overflow-hidden">
             <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
               <SheetTrigger asChild>
@@ -1045,7 +1045,7 @@ const Index = () => {
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 bg-background border-r border-border w-[240px]">
+              <SheetContent side="left" className="p-0 bg-background border-r border-black w-[240px]">
                 <SheetHeader className="sr-only">
                   <SheetTitle>Navigation Menu</SheetTitle>
                   <SheetDescription>Access dashboard views and flight operations input.</SheetDescription>
@@ -1060,7 +1060,7 @@ const Index = () => {
             <div className="hidden md:block">
               <LiveClock />
             </div>
-            <div className="hidden sm:block h-3 w-px bg-border" />
+            <div className="hidden sm:block h-3 w-px bg-black" />
             <div className="hidden sm:flex items-center gap-2 text-xs uppercase font-bold text-muted-foreground tracking-wider shrink-0">
               <CalendarIcon className="w-3 h-3 text-muted-foreground/60" />
               {formattedDate}
@@ -1068,7 +1068,7 @@ const Index = () => {
           </div>
           
           <div className="flex items-center gap-2 sm:gap-4">
-             <div className="hidden md:flex items-center gap-1 p-1 bg-foreground/5 rounded-full border border-border">
+             <div className="hidden md:flex items-center gap-1 p-1 bg-foreground/5 rounded-full border border-black">
                 <button onClick={() => setTheme('cyberpunk')} className={cn("w-6 h-6 rounded-full bg-[#00f3ff] transition-transform hover:scale-110", theme === 'cyberpunk' && "ring-2 ring-foreground ring-offset-2 ring-offset-background")} title="Cyberpunk" />
                 <button onClick={() => setTheme('midnight')} className={cn("w-6 h-6 rounded-full bg-[#0ea5e9] transition-transform hover:scale-110", theme === 'midnight' && "ring-2 ring-foreground ring-offset-2 ring-offset-background")} title="Midnight" />
                 <button onClick={() => setTheme('emerald')} className={cn("w-6 h-6 rounded-full bg-[#10b981] transition-transform hover:scale-110", theme === 'emerald' && "ring-2 ring-foreground ring-offset-2 ring-offset-background")} title="Emerald" />
@@ -1076,10 +1076,10 @@ const Index = () => {
              </div>
 
              <Select value={shift} onValueChange={(v) => handleShiftChange(v as ShiftMode)}>
-                <SelectTrigger className="w-[110px] sm:w-[130px] h-9 text-xs font-bold uppercase bg-foreground/5 border-border text-muted-foreground">
+                <SelectTrigger className="w-[110px] sm:w-[130px] h-9 text-xs font-bold uppercase bg-foreground/5 border-black text-muted-foreground">
                   <SelectValue placeholder="Shift" />
                 </SelectTrigger>
-                <SelectContent className="bg-popover border-border text-popover-foreground">
+                <SelectContent className="bg-popover border-black text-popover-foreground">
                   <SelectItem value="all">Full Day</SelectItem>
                   <SelectItem value="morning">Morning</SelectItem>
                   <SelectItem value="evening">Evening</SelectItem>
@@ -1093,12 +1093,12 @@ const Index = () => {
                   <span className="hidden sm:inline">Set Date</span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-popover border-border" align="end">
+              <PopoverContent className="w-auto p-0 bg-popover border-black" align="end">
                 <Calendar mode="single" selected={selectedDate} onSelect={handleDateChange} initialFocus className="bg-popover text-popover-foreground" />
               </PopoverContent>
             </Popover>
 
-            <div className="flex items-center space-x-2 bg-background/50 border border-border/50 rounded-lg px-3 h-9 shrink-0">
+            <div className="flex items-center space-x-2 bg-background/50 border border-black/50 rounded-lg px-3 h-9 shrink-0">
               <Label htmlFor="edit-mode" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">Edit Mode</Label>
               <Switch 
                 id="edit-mode" 
@@ -1131,7 +1131,7 @@ const Index = () => {
                 <div className="h-1 w-10 bg-primary rounded-full shadow-[0_0_10px_black] dark:shadow-[0_0_10px_var(--neon-cyan)]"></div>
                 <h3 className="text-sm font-black text-foreground/50 uppercase tracking-[0.25em]">Fleet Operational Pulse</h3>
               </div>
-              <div className="flex items-center gap-3 bg-foreground/5 px-6 py-2.5 rounded-full border border-border">
+              <div className="flex items-center gap-3 bg-foreground/5 px-6 py-2.5 rounded-full border border-black">
                 <span className="text-xs font-black text-foreground/40 uppercase tracking-widest">Aggregate</span>
                 <span className="text-base font-black text-foreground font-mono">{stats.totalCount} MVMT</span>
                 <span className="h-4 w-px bg-border mx-1" />
@@ -1160,7 +1160,7 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-1 sm:p-2 min-h-[500px] border border-border relative group">
+          <div className="glass-card rounded-2xl p-1 sm:p-2 min-h-[500px] border border-black relative group">
             <div className="absolute -inset-px rounded-2xl bg-gradient-to-tr from-primary/10 via-transparent to-secondary/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
             
             <div className="p-3 sm:p-6 h-full">
@@ -1182,10 +1182,10 @@ const Index = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
                         <Select value={filter} onValueChange={(v) => setFilter(v as FilterMode)}>
-                          <SelectTrigger className="w-[140px] h-9 text-xs font-bold uppercase bg-foreground/5 border-border text-muted-foreground px-4">
+                          <SelectTrigger className="w-[140px] h-9 text-xs font-bold uppercase bg-foreground/5 border-black text-muted-foreground px-4">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-popover border-border text-popover-foreground">
+                          <SelectContent className="bg-popover border-black text-popover-foreground">
                             <SelectItem value="all">Full Traffic</SelectItem>
                             <SelectItem value="departure">Departures</SelectItem>
                             <SelectItem value="arrival">Arrivals</SelectItem>
@@ -1210,9 +1210,14 @@ const Index = () => {
                           <span className="text-sm font-black uppercase tracking-[0.2em] text-foreground/80">Domestic Payload Matrix</span>
                         </div>
                         {domesticFlights.length > 0 ? (
-                          <FlightTable data={domesticFlights} onDelete={handleDeleteFlight} />
+                          <FlightTable 
+                            data={domesticFlights} 
+                            onDelete={handleDeleteFlight} 
+                            isEditMode={isEditMode}
+                            onUpdateFlight={handleUpdateFlight}
+                          />
                         ) : (
-                          <div className="h-40 flex items-center justify-center border border-border rounded-[var(--radius)] bg-foreground/2 text-xs uppercase font-black tracking-widest text-foreground/40">No Domestic Traffic</div>
+                          <div className="h-40 flex items-center justify-center border border-black rounded-[var(--radius)] bg-foreground/2 text-xs uppercase font-black tracking-widest text-foreground/40">No Domestic Traffic</div>
                         )}
                       </div>
 
@@ -1223,9 +1228,14 @@ const Index = () => {
                           <span className="text-sm font-black uppercase tracking-[0.2em] text-foreground/80">International Payload Matrix</span>
                         </div>
                         {internationalFlights.length > 0 ? (
-                          <FlightTable data={internationalFlights} onDelete={handleDeleteFlight} />
+                          <FlightTable 
+                            data={internationalFlights} 
+                            onDelete={handleDeleteFlight} 
+                            isEditMode={isEditMode}
+                            onUpdateFlight={handleUpdateFlight}
+                          />
                         ) : (
-                          <div className="h-40 flex items-center justify-center border border-border rounded-[var(--radius)] bg-foreground/2 text-xs uppercase font-black tracking-widest text-foreground/40">No Intl Traffic</div>
+                          <div className="h-40 flex items-center justify-center border border-black rounded-[var(--radius)] bg-foreground/2 text-xs uppercase font-black tracking-widest text-foreground/40">No Intl Traffic</div>
                         )}
                       </div>
                     </div>
@@ -1244,7 +1254,7 @@ const Index = () => {
 
               {activeTab === 'settings' && (
                 <div className="space-y-8 max-w-2xl mx-auto">
-                  <div className="glass-card rounded-2xl border border-border p-6 space-y-4">
+                  <div className="glass-card rounded-2xl border border-black p-6 space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-xs font-black text-foreground uppercase tracking-[0.3em] flex items-center gap-2">
@@ -1255,7 +1265,7 @@ const Index = () => {
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-4 bg-foreground/5 rounded-xl border border-border">
+                    <div className="flex items-center justify-between p-4 bg-foreground/5 rounded-xl border border-black">
                       <div className="space-y-0.5">
                         <label className="text-xs font-black text-foreground uppercase tracking-widest">Simplified Dark Mode</label>
                         <p className="text-[10px] text-muted-foreground font-bold uppercase">Disables neon glows and complex gradients.</p>
@@ -1268,7 +1278,7 @@ const Index = () => {
                       />
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-foreground/5 rounded-xl border border-border">
+                    <div className="flex items-center justify-between p-4 bg-foreground/5 rounded-xl border border-black">
                       <div className="space-y-0.5">
                         <label className="text-xs font-black text-foreground uppercase tracking-widest">Enterprise Classic Theme</label>
                         <p className="text-[10px] text-muted-foreground font-bold uppercase">Standard aviation professional interface.</p>
@@ -1318,12 +1328,12 @@ const Index = () => {
                 <div className="space-y-1">
                   <Label htmlFor="flightNo" className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Flight No</Label>
                   <div className="flex items-center">
-                    <span className={cn("bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-primary", formErrors.flightNo && "border-destructive")}>BS</span>
+                    <span className={cn("bg-foreground/10 h-8 px-3 flex items-center text-[10px] font-black border border-r-0 border-black rounded-l-md text-primary", formErrors.flightNo && "border-destructive")}>BS</span>
                     <Input 
                       id="flightNo" 
                       value={newFlight.flightNo} 
                       onChange={e => updateNewFlightField('flightNo', e.target.value.toUpperCase())}
-                      className={cn("h-8 text-xs bg-background/50 border-border rounded-l-none font-bold", formErrors.flightNo && "border-destructive ring-1 ring-destructive")}
+                      className={cn("h-8 text-xs bg-background/50 border-black rounded-l-none font-bold", formErrors.flightNo && "border-destructive ring-1 ring-destructive")}
                       placeholder="101"
                     />
                   </div>
@@ -1337,7 +1347,7 @@ const Index = () => {
                     min="0"
                     value={newFlight.pax} 
                     onChange={e => updateNewFlightField('pax', Number(e.target.value))}
-                    className={cn("h-8 text-xs bg-background/50 border-border font-bold", formErrors.pax && "border-destructive ring-1 ring-destructive")} 
+                    className={cn("h-8 text-xs bg-background/50 border-black font-bold", formErrors.pax && "border-destructive ring-1 ring-destructive")} 
                   />
                 </div>
               </div>
@@ -1351,7 +1361,7 @@ const Index = () => {
                           variant="outline"
                           role="combobox"
                           aria-expanded={originComboboxOpen}
-                          className={cn("flex-1 h-8 text-xs bg-background/50 border-border justify-between font-bold", formErrors.from && "border-destructive")}
+                          className={cn("flex-1 h-8 text-xs bg-background/50 border-black justify-between font-bold", formErrors.from && "border-destructive")}
                         >
                           <span className="font-black">{newFlight.from}</span>
                           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
@@ -1387,7 +1397,7 @@ const Index = () => {
                           variant="outline"
                           role="combobox"
                           aria-expanded={comboboxOpen}
-                          className={cn("flex-1 h-8 text-xs bg-background/50 border-border justify-between font-bold", formErrors.to && "border-destructive")}
+                          className={cn("flex-1 h-8 text-xs bg-background/50 border-black justify-between font-bold", formErrors.to && "border-destructive")}
                         >
                           {newFlight.to ? (
                             <div className="flex items-center gap-2">
@@ -1456,7 +1466,7 @@ const Index = () => {
                     <div className="space-y-1">
                       <Label className="text-[9px] uppercase font-black text-primary/70 ml-1 text-center block">Block Time</Label>
                       <div className={cn(
-                        "flex items-center gap-1.5 p-1 bg-background border border-border/50 rounded-lg",
+                        "flex items-center gap-1.5 p-1 bg-background border border-black/50 rounded-lg",
                         formErrors.duration && "border-destructive ring-1 ring-destructive"
                       )}>
                         <Input 
@@ -1505,7 +1515,7 @@ const Index = () => {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="grid grid-cols-2 gap-3 overflow-hidden p-3 bg-foreground/5 rounded-xl border border-border"
+                    className="grid grid-cols-2 gap-3 overflow-hidden p-3 bg-foreground/5 rounded-xl border border-black"
                   >
                     <div className="space-y-1">
                       <Label htmlFor="reg" className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">REG</Label>
@@ -1515,7 +1525,7 @@ const Index = () => {
                           id="reg" 
                           value={newFlight.reg} 
                           onChange={e => updateNewFlightField('reg', e.target.value.toUpperCase())}
-                          className="h-8 pl-8 text-xs bg-background border-border font-bold" 
+                          className="h-8 pl-8 text-xs bg-background border-black font-bold" 
                           placeholder="AHC"
                         />
                       </div>
@@ -1526,7 +1536,7 @@ const Index = () => {
                         id="aircraft" 
                         value={newFlight.aircraft} 
                         onChange={e => updateNewFlightField('aircraft', e.target.value.toUpperCase())}
-                        className="h-8 text-xs bg-background border-border font-bold" 
+                        className="h-8 text-xs bg-background border-black font-bold" 
                         placeholder="738 / AT7"
                       />
                     </div>
@@ -1582,11 +1592,11 @@ const Index = () => {
                         <div className="space-y-1">
                           <Label className="text-[10px] font-black uppercase tracking-widest text-secondary/70 ml-1">Return No</Label>
                           <div className="flex items-center">
-                            <span className="bg-foreground/5 h-8 px-2.5 flex items-center text-[10px] font-black border border-r-0 border-border rounded-l-md text-secondary/50">BS</span>
+                            <span className="bg-foreground/5 h-8 px-2.5 flex items-center text-[10px] font-black border border-r-0 border-black rounded-l-md text-secondary/50">BS</span>
                             <Input 
                               value={returnFlight.flightNo} 
                               onChange={e => updateReturnFlightField('flightNo', e.target.value.toUpperCase())}
-                              className="h-8 text-xs bg-background border-border rounded-l-none font-bold"
+                              className="h-8 text-xs bg-background border-black rounded-l-none font-bold"
                             />
                           </div>
                         </div>
@@ -1624,11 +1634,11 @@ const Index = () => {
                           <div className="space-y-1">
                             <Label className="text-[8px] font-black uppercase text-primary/60 ml-0.5">Conn Flt No</Label>
                             <div className="flex items-center">
-                              <span className="bg-foreground/5 h-7 px-1.5 flex items-center text-[8px] font-black border border-r-0 border-border rounded-l text-primary/50">BS</span>
+                              <span className="bg-foreground/5 h-7 px-1.5 flex items-center text-[8px] font-black border border-r-0 border-black rounded-l text-primary/50">BS</span>
                               <Input 
                                 value={outboundConFlightNo}
                                 onChange={e => setOutboundConFlightNo(e.target.value)}
-                                className="h-7 text-[10px] bg-background border-border rounded-l-none font-bold"
+                                className="h-7 text-[10px] bg-background border-black rounded-l-none font-bold"
                               />
                             </div>
                           </div>
@@ -1648,7 +1658,7 @@ const Index = () => {
           </div>
 
           <div className="px-6 py-4 bg-primary/5 border-t border-primary/10 flex items-center gap-3">
-            <Button variant="ghost" onClick={handleManualEntryClose} className="flex-1 text-[11px] font-black uppercase tracking-widest h-10 ring-1 ring-border">Cancel</Button>
+            <Button variant="ghost" onClick={handleManualEntryClose} className="flex-1 text-[11px] font-black uppercase tracking-widest h-10 ring-1 ring-black">Cancel</Button>
             <Button onClick={handleManualAdd} className="flex-[2] text-[11px] font-black uppercase tracking-widest h-10 bg-primary hover:bg-primary/90 glow-cyan">Commit Rotation</Button>
           </div>
         </DialogContent>
@@ -1679,7 +1689,7 @@ const StatCard = ({ label, value, subValue, icon, variant }: { label: string, va
     whileHover={{ scale: 1.02, translateY: -2 }}
     whileTap={{ scale: 0.98 }}
     className={cn(
-      "glass-card p-4 rounded-[var(--radius)] border border-border flex flex-col gap-4 group transition-all duration-300 relative overflow-hidden",
+      "glass-card p-4 rounded-[var(--radius)] border border-black flex flex-col gap-4 group transition-all duration-300 relative overflow-hidden",
       "hover:border-primary/50 hover:shadow-[0_0_20px_rgba(0,243,255,0.15)]",
       variant === 'magenta' && "hover:border-secondary/50 hover:shadow-[0_0_20px_rgba(236,72,153,0.15)]"
     )}
@@ -1687,7 +1697,7 @@ const StatCard = ({ label, value, subValue, icon, variant }: { label: string, va
     <div className="absolute inset-0 bg-gradient-to-br from-foreground/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
     <div className="flex items-center justify-between relative z-10">
       <div className={cn(
-        "p-2.5 rounded-[var(--radius)] shadow-sm border border-border transition-all duration-300",
+        "p-2.5 rounded-[var(--radius)] shadow-sm border border-black transition-all duration-300",
         variant === 'cyan' ? 'bg-primary/20 text-primary group-hover:shadow-[0_0_10px_var(--neon-cyan)]' : 
         variant === 'magenta' ? 'bg-secondary/20 text-secondary group-hover:shadow-[0_0_10px_var(--neon-magenta)]' : 
         'bg-background/40 text-foreground/40'
@@ -1712,7 +1722,7 @@ const RouteFilterBtn = ({ active, onClick, label }: { active: boolean, onClick: 
     onClick={onClick}
     className={cn(
       "px-5 py-2 rounded-[var(--radius)] text-xs font-black uppercase tracking-widest transition-all",
-      active ? "bg-foreground/10 text-primary border border-border" : "text-foreground/60 hover:text-foreground/80"
+      active ? "bg-foreground/10 text-primary border border-black" : "text-foreground/60 hover:text-foreground/80"
     )}
   >
     {label}
